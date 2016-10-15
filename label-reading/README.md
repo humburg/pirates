@@ -1,0 +1,1 @@
+Python utilities to print out label data from start and end of sequence. These assume that you have a local directory named 'data' and will try and read the file 'data/fastq/Jurkat_only.assembled.fastq.gz'
