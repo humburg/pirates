@@ -15,5 +15,9 @@ To get a sorted listogram of labels
 cut -f1 -d' ' all-labels.txt | sort | uniq -c > histogram-labels.txt
 sort -k1,1rn histogram-labels.txt > sorted-histogram-labels.txt
 ```
+To get a histogram of that histogram
+```
+awk '{print $1}' histogram-labels.txt | sort -n | uniq -c > count-of-counts.txt
+```
 
 
