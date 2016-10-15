@@ -19,5 +19,18 @@ To get a histogram of that histogram
 ```
 awk '{print $1}' histogram-labels.txt | sort -n | uniq -c > count-of-counts.txt
 ```
+To extract a entries from the original datafile with a particular label. e.g for sequence with label `AGTCATAGATGTTGGT`
+```
+python match-label.py AGTCATAGATGTTGGT > lines-AGTCATAGATGTTGGT.txt
+```
+To extract the sequence (delete the 12 byte labels from the start and end)
+```
+python extract-sequence.py lines-AGTCATAGATGTTGGT.txt > sequence-AGTCATAGATGTTGGT.txt
+```
+To count how many lines are the same in that file
+```
+sort sequence-AGTCATAGATGTTGGT.txt | uniq -c
+```
+
 
 
