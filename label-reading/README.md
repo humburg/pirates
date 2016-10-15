@@ -31,6 +31,9 @@ To count how many lines are the same in that file
 ```
 sort sequence-AGTCATAGATGTTGGT.txt | uniq -c
 ```
-
+To list all labels and associated reading quality values
+```
+python list-labels-and-quality.py > all-labels-and-quality.txt
+```
 
 
