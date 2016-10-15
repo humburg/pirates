@@ -10,3 +10,10 @@ To list all the labels into the one 425MB file:
 python list-labels.py > all-labels.txt
 ```
 
+To get a sorted listogram of labels
+```
+cut -f1 -d' ' all-labels.txt | sort | uniq -c > histogram-labels.txt
+sort -k1,1rn histogram-labels.txt > sorted-histogram-labels.txt
+```
+
+
