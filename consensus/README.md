@@ -1,5 +1,9 @@
 Parses fastq file in one pass and builds consensus about sequences. On the data tested we filtered around 16.5 million sequence readings into around 800k unique sequences.
 
+## File Formats
+
+Reads from fastq file and outputs sequences to stdout. Some stats reported to stderr.
+
 Input format is usual fastq format:
 
 ```
@@ -19,6 +23,12 @@ Output format is
 ```
 
 where:
-* name - line starting with '@' character, sub fields
+* 1st line: name - line starting with '@' character, sub fields
   * sequence count - number of sequences that were processed in making this consensus sequence
   * diff - one or more difference counts indicating where nucleotide has been substituted in building the consensus, first value is character position in the sequence and then the count of 'A', 'C', 'G' and 'T' observed at that position
+* 2nd line: label id and sequence
+* 3rd line: '+' character
+* 4th line: quality data associated with label and sequence reading
+
+### Future Work
+Current script only records difference where substituation have been made into the consensus sequence which happen when a observed nucleotide has a higher quality reading then the existing value at that position in the consensus sequence. May be better to reord all difference observed. 
