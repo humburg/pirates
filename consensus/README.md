@@ -1,4 +1,8 @@
-Parses fastq file in one pass and builds consensus about sequences. On the data tested we filtered around 16.5 million sequence readings into around 800k unique sequences.
+Parses fastq file in one pass and builds consensus about sequences. 
+
+## What it Does
+
+Takes a fastq file of sequence readings and sorts them according to the observed 16 character label. For each sorted group the sequence is examined and at each nucleotide position the reading with the highest quality is kept, along with that quality, to build what we have called a consensus sequence. A list of differences is recorded and printed out with the sequence data. On the data tested we filtered around 16.5 million sequence readings into around 800k unique sequences.
 
 ## File Formats
 
