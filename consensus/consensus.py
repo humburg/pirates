@@ -99,10 +99,8 @@ def consensus(qidE, qidN, seqE, seqN, qseqE, qseqN, count, diffs):
 #
 for line in f:
     # print out some stats as we go
-    if (c % 101) == 100:
-        print >> sys.stderr, c
-        print >> sys.stderr, len(seq)
-        break
+    if (c % 100000) == 0:
+        print >> sys.stderr, c, "seen", len(seq), "different", len(different), "shorter", len(shorter), "longer", len(longer)
 
     if (c % 4) == 1:
         line = line.rstrip("\n")
@@ -179,8 +177,8 @@ for line in f:
         
         # update count for this sequence label
         seqcount[nameid] += 1
-        if len(diff[nameid]) > 1:
-            break
+        #if len(diff[nameid]) > 1:
+        #    break
         continue
         
     c = c + 1
@@ -194,7 +192,7 @@ print >> sys.stderr,  "Number of sequences that were longer then consensus seque
 # Print everything out
 # '@'int [int,A,int,C,int,T,int,G,int ...]
 #
-for label in sorted(seqcount, key=lamba x: d[x]):
+for label in sorted(seqcount, key=lambda x:seqcount[x]):
     name = "@" + str(seqcount[label])
     # loop over any diffs and add to name string
     for pos in diff[label]:
