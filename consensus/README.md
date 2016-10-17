@@ -20,7 +20,7 @@ Input format is usual fastq format:
 Output format is
 
 ```
-@[int sequence count] [int char position]A[int count]T[int count']C[int count]G[int count] ...
+@[int sequence count] [int char position]A[int count]T[int count']C[int count]G[int count]N[int count] ...
 [16 char label][variable length sequence]
 +
 [quailty readings match label and sequence above]
