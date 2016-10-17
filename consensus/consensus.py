@@ -66,27 +66,31 @@ def consensus(qidE, qidN, seqE, seqN, qseqE, qseqN, count, diffs):
         else:
             sq += qseqN[i]
             
-        # if new sequence character differs then change if it has a higher quality
-        # if we change then record a diff
+        # check if new sequence has different nucliotide value at this position
         if seqN[i] != seqE[i]:
+            # if this position in the new sequence has higher quality reading than
+            # the consensus then swap it in
             if qseqN[i] > qseqE[i]:
-                # change values
                 s += seqN[i]
-                # update diff
-                if i not in diffs:
-                    # create diff entry for this position
-                    diffs[i] = {}
-                    diffs[i]['A'] = 0
-                    diffs[i]['G'] = 0
-                    diffs[i]['C'] = 0
-                    diffs[i]['T'] = 0
-                    # update for count seen so far
-                    diffs[i][seqE[i]] = count
-                    
-                diffs[i][seqN[i]] += 1
-                continue
+            else:
+                s += seqE[i]
+
+            # update diff to record reading discrepancy at this position
+            if i not in diffs:
+                # create diff entry for this position
+                diffs[i] = {}
+                diffs[i]['A'] = 0
+                diffs[i]['G'] = 0
+                diffs[i]['C'] = 0
+                diffs[i]['T'] = 0
+                diffs[i]['N'] = 0
+                # update for count seen so far
+                diffs[i][seqE[i]] = count
+                
+            diffs[i][seqN[i]] += 1
+            continue
         
-        # else keeping value, udpate diffs if they exist for this position
+        # sequences agree at this psoition, if diff exists then update
         s += seqE[i]
         if i in diffs:
             diffs[i][seqE[i]] += 1
@@ -190,14 +194,14 @@ print >> sys.stderr,  "Number of sequences that were longer then consensus seque
 
 #
 # Print everything out
-# '@'int [int,A,int,C,int,T,int,G,int ...]
+# '@'int [int,A,int,C,int,T,int,G,int,N,int ...]
 #
 for label in sorted(seqcount, key=lambda x:seqcount[x]):
     name = "@" + str(seqcount[label])
     # loop over any diffs and add to name string
     for pos in diff[label]:
         name += " " + str(pos)
-        for c in ['A', 'C', 'T', 'G']:
+        for c in ['A', 'C', 'T', 'G', 'N']:
             name += c + str(diff[label][pos][c])
             
     # print out sequence data

@@ -29,10 +29,8 @@ Output format is
 where:
 * 1st line: name - line starting with '@' character, sub fields
   * sequence count - number of sequences that were processed in making this consensus sequence
-  * diff - one or more difference counts indicating where nucleotide has been substituted in building the consensus, first value is character position in the sequence and then the count of 'A', 'C', 'G' and 'T' observed at that position
+  * diff - one or more difference counts indicating where nucleotide has been recorded differently in observed sequences, first value is character position in the sequence and then the count of 'A', 'C', 'G', 'T' and 'N' observed at that position
 * 2nd line: label id and sequence
 * 3rd line: '+' character
 * 4th line: quality data associated with label and sequence reading
 
-### Future Work
-Current script only records difference where substituation have been made into the consensus sequence which happen when a observed nucleotide has a higher quality reading then the existing value at that position in the consensus sequence. May be better to reord all difference observed. 
