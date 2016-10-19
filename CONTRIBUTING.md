@@ -14,6 +14,7 @@ labels are used to categorise these:
 | `enhancement`    |  A new feature or substantial improvement to the algorithm. |
 | `infrastructure` |  Tasks related to the general infrastructure of the project. These don't require any changes to the underlying algorithm. |
 | `investigate`    |  Issues that may require some digging into the data and the output the algorithm generates from it to decide whether a change to the algorithm is required. This may result in a request for a new feature, a tweak to the algorithm or a bug report, rather than any code being contributed directly. |
+| `question`       | Requests for clarification or discussion that aren't feature requests or bug reports. |
 | `tweak`          |  A minor change to the algorithm or its implementation. |
 
 ## Contributing new features
