@@ -25,5 +25,9 @@ branch at anytime to initiate discussion. It is helpful to label pull requests f
 branches that are not yet ready for merging as `work-in-progress`.  
 
 ## Contributing new features
+Got an idea for a new feature or an improvement for the core algorithm?
+We want to hear about it! Before starting work on an implementation it is 
+advisable to discuss your idea. Open an issue with a description of what you want
+to do and solicit comments.
 
 ## Styleguides
