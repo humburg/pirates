@@ -1,6 +1,5 @@
 # Contributing to this project
-Welcome, and thanks for your intrest in contributing to the project. Below are a few guidelines to help you
-contribute in a productive way. These are guidelines, not strict rules. If in doubt, use common sense.
+Welcome, and thanks for your intrest in contributing to the project. Below are a few guidelines to help you contribute in a productive way. These are guidelines, not strict rules. If in doubt, use common sense and feel free to suggests changes to these guidelines via a pull request.
 
 ## Reporting bugs
 
