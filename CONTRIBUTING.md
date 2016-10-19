@@ -2,6 +2,9 @@
 Welcome, and thanks for your intrest in contributing to the project. Below are a few guidelines to help you contribute in a productive way. These are guidelines, not strict rules. If in doubt, use common sense and feel free to suggests changes to these guidelines via a pull request.
 
 ## Reporting bugs
+Something not working right? Log it on the issue tracker. We'll have a much better
+chance of fixing it if you can provide a reproducible example and as much detail
+about the problem as possible.
 
 ## Addressing open issues
 The issue tracker contains a collection of issues that are waiting for someone to handle them. A number of
