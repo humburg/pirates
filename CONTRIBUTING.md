@@ -16,6 +16,14 @@ labels are used to categorise these:
 | `question`       | Requests for clarification or discussion that aren't feature requests or bug reports. |
 | `tweak`          |  A minor change to the algorithm or its implementation. |
 
+If the issue description is unclear don't hesitate to ask for clarification. Once
+you've identified a problem that you'd like to tackle, leave a comment to say so to avoid duplication of effort.
+
+Use [feature branches](https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow)
+to work on new features and bug fixes. Feel free to create a pull request for the
+branch at anytime to initiate discussion. It is helpful to label pull requests for
+branches that are not yet ready for merging as `work-in-progress`.  
+
 ## Contributing new features
 
 ## Styleguides
