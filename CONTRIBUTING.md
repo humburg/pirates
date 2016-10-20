@@ -34,3 +34,13 @@ advisable to discuss your idea. Open an issue with a description of what you wan
 to do and solicit comments.
 
 ## Styleguides
+### Code formatting
+Use **four spaces** for indenting.
+
+Follow the standard Python [style for code](https://www.python.org/dev/peps/pep-0008/).
+The easiest way to do this is to run [pylint](https://www.pylint.org/). Plugins for
+many popular text editors and IDEs are available.
+
+### Documentation
+Use [Google style Python docstrings](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
+to document modules, classes and functions.
