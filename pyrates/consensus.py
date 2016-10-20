@@ -3,8 +3,6 @@
 
 import logging
 
-LOG = logging.getLogger(__name__)
-
 def grosslydifferent(seq1, seq2):
     """Partial comparison of sequences to determine whether
     they are substantially different.
@@ -47,16 +45,18 @@ def consensus(qidE, qidN, seqE, seqN, qseqE, qseqN, count, diffs):
                 'qseq': Consensus quality
             }
     """
+
+    logger = logging.getLogger(__name__)
     # better do some sanity checking
     if len(qidE) != len(qidN):
-        LOG.error("Mismatch in id quality length, this should not happen. Check your input.")
-        LOG.debug("Mismatching quality strings were '" + qidE + "' and '" + qidN)
+        logger.error("Mismatch in id quality length, this should not happen. Check your input.")
+        logger.debug("Mismatching quality strings were '" + qidE + "' and '" + qidN)
         return {'qid':qidE, 'seq':seqE, 'qseq':qseqE}
 
     if len(qseqE) != len(qseqN):
-        LOG.error("Mismatch in sequence quality length, this should not happen." + \
+        logger.error("Mismatch in sequence quality length, this should not happen." + \
                      " Check your input.")
-        LOG.debug("Mismatching sequence qualities were '" + qseqE + "' and '" + qseqN)
+        logger.debug("Mismatching sequence qualities were '" + qseqE + "' and '" + qseqN)
         return {'qid':qidE, 'seq':seqE, 'qseq':qseqE}
 
     # step through quality and record highest at each step

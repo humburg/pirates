@@ -10,8 +10,6 @@ import time
 
 import pyrates.consensus as cons
 
-LOG = logging.getLogger('pyrates')
-
 def main():
     """Entrypoint for command-line interface
     """
@@ -38,11 +36,12 @@ def main():
     args = parser.parse_args()
 
     ## configure logging
-    LOG.setLevel(getattr(logging, args.log, None))
+    logger = logging.getLogger('pyrates')
+    logger.setLevel(getattr(logging, args.log, None))
     console_handler = logging.StreamHandler()
     cons_formatter = logging.Formatter('[%(levelname)s] %(name)s - %(message)s')
     console_handler.setFormatter(cons_formatter)
-    LOG.addHandler(console_handler)
+    logger.addHandler(console_handler)
 
     input_fun = open
     if args.fastq.endswith('.gz'):
@@ -64,7 +63,7 @@ def main():
         for line in fastq:
             # print out some stats as we go
             if (line_count % 100000) == 0:
-                LOG.debug(line_count, "seen", len(seq),
+                logger.debug(line_count, "seen", len(seq),
                           "different", len(different), "shorter", len(shorter),
                           "longer", len(longer))
 
@@ -138,12 +137,12 @@ def main():
 
             line_count += 1
 
-    LOG.info("Number of consensus sequence with unique labels " + str(len(seq)))
-    LOG.info("Number sequences grossly difference from consensus with same label " +
+    logger.info("Number of consensus sequence with unique labels " + str(len(seq)))
+    logger.info("Number sequences grossly difference from consensus with same label " +
              str(len(different)))
-    LOG.info("Number of sequences that were shorter than consensus sequence " +
+    logger.info("Number of sequences that were shorter than consensus sequence " +
              str(len(shorter)))
-    LOG.info("Number of sequences that were longer then consensus sequence " + str(len(longer)))
+    logger.info("Number of sequences that were longer then consensus sequence " + str(len(longer)))
 
     #
     # Print everything out
@@ -163,6 +162,6 @@ def main():
             output.write(label + seq[label][1] + "\n+\n")
             output.write(seq[label][0] + seq[label][2] + "\n")
 
-    LOG.info('Time taken: ' + str(datetime.timedelta(seconds=time.time() - started_at)))
+    logger.info('Time taken: ' + str(datetime.timedelta(seconds=time.time() - started_at)))
     mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
-    LOG.info('Memory used: ' + str(mem) + 'MB')
+    logger.info('Memory used: ' + str(mem) + 'MB')
