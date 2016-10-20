@@ -50,13 +50,13 @@ def consensus(qidE, qidN, seqE, seqN, qseqE, qseqN, count, diffs):
     # better do some sanity checking
     if len(qidE) != len(qidN):
         logger.error("Mismatch in id quality length, this should not happen. Check your input.")
-        logger.debug("Mismatching quality strings were '" + qidE + "' and '" + qidN)
+        logger.debug("Mismatching quality strings were '%s' and '%s'", qidE, qidN)
         return {'qid':qidE, 'seq':seqE, 'qseq':qseqE}
 
     if len(qseqE) != len(qseqN):
         logger.error("Mismatch in sequence quality length, this should not happen." + \
                      " Check your input.")
-        logger.debug("Mismatching sequence qualities were '" + qseqE + "' and '" + qseqN)
+        logger.debug("Mismatching sequence qualities were '%s' and '%s'", qseqE, qseqN)
         return {'qid':qidE, 'seq':seqE, 'qseq':qseqE}
 
     # step through quality and record highest at each step

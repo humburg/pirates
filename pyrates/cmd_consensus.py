@@ -63,9 +63,9 @@ def main():
         for line in fastq:
             # print out some stats as we go
             if (line_count % 100000) == 0:
-                logger.debug(line_count, "seen", len(seq),
-                          "different", len(different), "shorter", len(shorter),
-                          "longer", len(longer))
+                logger.debug("%d seen: %d different: %d shorter: %d longer: %d",
+                             line_count, len(seq), len(different), len(shorter),
+                             len(longer))
 
             if (line_count % 4) == 1:
                 line = line.rstrip("\n")
@@ -137,12 +137,11 @@ def main():
 
             line_count += 1
 
-    logger.info("Number of consensus sequence with unique labels " + str(len(seq)))
-    logger.info("Number sequences grossly difference from consensus with same label " +
-             str(len(different)))
-    logger.info("Number of sequences that were shorter than consensus sequence " +
-             str(len(shorter)))
-    logger.info("Number of sequences that were longer then consensus sequence " + str(len(longer)))
+    logger.info("Number of consensus sequence with unique labels: %d" + len(seq))
+    logger.info("Number sequences grossly difference from consensus with same label: %d",
+                len(different))
+    logger.info("Number of sequences that were shorter than consensus sequence: %d", len(shorter))
+    logger.info("Number of sequences that were longer then consensus sequence %d", len(longer))
 
     #
     # Print everything out
@@ -162,6 +161,6 @@ def main():
             output.write(label + seq[label][1] + "\n+\n")
             output.write(seq[label][0] + seq[label][2] + "\n")
 
-    logger.info('Time taken: ' + str(datetime.timedelta(seconds=time.time() - started_at)))
-    mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
-    logger.info('Memory used: ' + str(mem) + 'MB')
+    logger.info('Time taken: %s', str(datetime.timedelta(seconds=time.time() - started_at)))
+    mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+    logger.info('Memory used: %.2f MB', mem)
