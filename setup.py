@@ -23,6 +23,9 @@ setup(
     keywords="sequencing error-correction consensus fastq",
     url="https://github.com/humburg/pirates",
     packages=['pyrates'],
+    entry_points={
+        "console_scripts":['pyrates = pyrates.cmd_consensus:main']
+    },
     long_description=read('README.md'),
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
