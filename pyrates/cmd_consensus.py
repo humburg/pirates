@@ -10,7 +10,7 @@ import time
 
 import pyrates.consensus as cons
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger('pyrates')
 
 def main():
     """Entrypoint for command-line interface
