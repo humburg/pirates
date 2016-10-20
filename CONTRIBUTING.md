@@ -44,3 +44,13 @@ many popular text editors and IDEs are available.
 ### Documentation
 Use [Google style Python docstrings](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
 to document modules, classes and functions.
+
+### Producing messages during program execution
+
+* Use Python's [logging facilities](https://docs.python.org/2/howto/logging.html) 
+to print messages during program execution. 
+* Avoid the use of module level loggers, just create one when needed.
+* Use `__name__` as name for loggers, except inside functions used as command-
+  line scripts where you should use the package name instead. This will automatically
+  generate an appropriate hirarchy of loggers. 
+
