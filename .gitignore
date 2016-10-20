@@ -1,2 +1,4 @@
 build/*
 .vscode/.ropeproject/config.py
+dist/*
+*.egg-info/*
