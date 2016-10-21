@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     zip \
     libncurses5-dev \
     wget \
+    git \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -17,7 +18,8 @@ RUN apt-get update && apt-get install -y \
 ## Install latest version of python packages
 RUN pip install \
     argparse \
-    coverage
+    coverage \
+    versioneer
 
 ## Install pyrates package
 # using development version mounted from host for now

@@ -1,6 +1,7 @@
 import os
 from setuptools import setup
 
+import versioneer
 
 def read(fname):
     """
@@ -8,13 +9,14 @@ def read(fname):
     Used to read README for the long_description and VERSION for the version number.
     It's nice, because now 1) we have a top level
     README file 2) it's easier to type in the README file than to put a raw
-    string in below and 3) we can use a central place to keep version information.
+    string in below.
     """
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
     name="pyrates",
-    version=read('VERSION'),
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     author="Peter Humburg, John Judge, David Kohn and Team Pirates",
     author_email="p.humburg@garvan.org.au",
     description=("Reduces errors in deep sequencing data by computing consensus",
