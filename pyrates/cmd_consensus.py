@@ -27,6 +27,18 @@ def main():
         help='Output file name'
         )
     parser.add_argument(
+        '--id-length', '-b',
+        metavar='LENGTH',
+        default=8,
+        help='Length of unique identifier at start of read.'
+    )
+    parser.add_argument(
+        '--adapter', '-a',
+        default='GACT',
+        help='Constant part of barcode adapter. This is expected to be located' +
+        ' between the UID and the actual read sequence.'
+    )
+    parser.add_argument(
         '--log',
         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
         default='INFO',
@@ -59,6 +71,8 @@ def main():
     shorter = {}
     longer = {}
     diff = {}
+    id_length = args.id_length
+    adapt_length = args.id_length + len(args.adapter)
     with input_fun(args.fastq) as fastq:
         for line in fastq:
             # print out some stats as we go
@@ -69,15 +83,15 @@ def main():
 
             if (line_count % 4) == 1:
                 line = line.rstrip("\n")
-                nameid = line[0:8] + line[-8:]
-                sequence = line[12:-12]
+                nameid = line[0:id_length] + line[-id_length:]
+                sequence = line[adapt_length:-adapt_length]
                 line_count += 1
                 continue
 
             if (line_count % 4) == 3:
                 line = line.rstrip("\n")
-                qnameid = line[0:8] + line[-8:]
-                qsequence = line[12:-12]
+                qnameid = line[0:id_length] + line[-id_length:]
+                qsequence = line[adapt_length:-adapt_length]
                 line_count += 1
 
                 # if not already seen then record and move on, create zero diffs dict
