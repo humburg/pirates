@@ -43,7 +43,7 @@ def main():
         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
         default='INFO',
         type=str.upper,
-        help='Set verbosity of log file output.'
+        help='Set verbosity of logging output.'
         )
     args = parser.parse_args()
 
