@@ -24,4 +24,5 @@ RUN pip install \
 ## Install pyrates package
 # using development version mounted from host for now
 
+VOLUME ['/data/fastq', '/data/assembled', '/data/test']
 WORKDIR /code
