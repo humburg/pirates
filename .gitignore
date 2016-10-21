@@ -2,4 +2,4 @@ build/*
 .vscode/.ropeproject/config.py
 dist/*
 *.egg-info/*
-versioneer.pyc
+*.pyc
