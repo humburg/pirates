@@ -137,7 +137,7 @@ def main():
 
             line_count += 1
 
-    logger.info("Number of consensus sequence with unique labels: %d" + len(seq))
+    logger.info("Number of consensus sequence with unique labels: %d", len(seq))
     logger.info("Number sequences grossly difference from consensus with same label: %d",
                 len(different))
     logger.info("Number of sequences that were shorter than consensus sequence: %d", len(shorter))
