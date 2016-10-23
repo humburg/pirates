@@ -34,6 +34,9 @@ treatments for patients.
 A high-throughput, paired-end deep sequencing dataset from an experiment targeting
 163 genes is available for testing in the form of a fastq file
 (3GB [download](https://dl.dropboxusercontent.com/u/1662684/data/Jurkat_only.assembled.fastq.gz)).
+A small subset of these data consisting of the first 10,000 reads is also available (1.8MB [download](https://dl.dropboxusercontent.com/u/1662684/data/test.assembled.fastq.gz)). Alternatively,
+both datasets are available as data volumes from DockerHub as `humburg/jurkat-only-rna-assembled`
+and `humburg/test-rna-assembled` respectively.
 
 Overlapping reads from each pair were merged into a single sequence with 
 [PEAR](http://sco.h-its.org/exelixis/web/software/pear/doc.html) (v0.9.10). 
