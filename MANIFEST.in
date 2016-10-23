@@ -1,0 +1,5 @@
+include versioneer.py
+include pyrates/_version.py
+
+include README.md
+include license.md
