@@ -1,5 +1,5 @@
 # Eliminating errors from high-throughput sequencing data
-[![Buid Status](https://travis-ci.org/humburg/pirates.svg?branch=master)](https://travis-ci.org/humburg/pirates#) [![Coverage Status](https://coveralls.io/repos/github/humburg/pirates/badge.svg)](https://coveralls.io/github/humburg/pirates) [![Code Health](https://landscape.io/github/humburg/pirates/master/landscape.svg?style=flat)](https://landscape.io/github/humburg/pirates/master/badges)
+[![Buid Status](https://travis-ci.org/humburg/pirates.svg?branch=master)](https://travis-ci.org/humburg/pirates#) [![Coverage Status](https://coveralls.io/repos/github/humburg/pirates/badge.svg?branch=master)](https://coveralls.io/github/humburg/pirates?branch=master) [![Code Health](https://landscape.io/github/humburg/pirates/master/landscape.svg?style=flat)](https://landscape.io/github/humburg/pirates/master/badges)
 
 This project was part of [HealthHack 2016](http://healthhack.com.au/). 
 The original solution developed there is still available at
