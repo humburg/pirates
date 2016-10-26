@@ -4,11 +4,13 @@
 import argparse
 import datetime
 import gzip
-import logging
 import resource
 import time
 
 import pyrates.consensus as cons
+import pyrates.utils as utils
+from . import __version__
+from ._version import get_versions
 
 def main():
     """Entrypoint for command-line interface
@@ -45,15 +47,19 @@ def main():
         type=str.upper,
         help='Set verbosity of logging output.'
         )
+    parser.add_argument(
+        '--version', '-V', action='version',
+        version='%(prog)s ' + __version__
+    )
     args = parser.parse_args()
 
     ## configure logging
-    logger = logging.getLogger('pyrates')
-    logger.setLevel(getattr(logging, args.log, None))
-    console_handler = logging.StreamHandler()
-    cons_formatter = logging.Formatter('[%(levelname)s] %(name)s - %(message)s')
-    console_handler.setFormatter(cons_formatter)
-    logger.addHandler(console_handler)
+    logger = utils.get_logger('pyrates', args.log, [utils.console_handler()])
+
+    logger.info('This is pyrates ' + __version__)
+    logger.debug('At revision ' + get_versions()['full-revisionid'])
+    logger.info('Processing input file ' + args.fastq)
+    logger.info('Consensus sequences will go to ' + args.output)
 
     input_fun = open
     if args.fastq.endswith('.gz'):
@@ -152,7 +158,7 @@ def main():
             line_count += 1
 
     logger.info("Number of consensus sequence with unique labels: %d", len(seq))
-    logger.info("Number sequences grossly difference from consensus with same label: %d",
+    logger.info("Number sequences grossly differet from consensus with same label: %d",
                 len(different))
     logger.info("Number of sequences that were shorter than consensus sequence: %d", len(shorter))
     logger.info("Number of sequences that were longer then consensus sequence %d", len(longer))

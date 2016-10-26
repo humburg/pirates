@@ -4,7 +4,6 @@ MAINTAINER Peter Humburg <p.humburg@garvan.org.au>
 ## Install dependencies through distribution packages
 RUN apt-get update && apt-get install -y \
     python \
-    python-nose \
     python-pip \
     zlib1g-dev \
     zip \
@@ -15,14 +14,12 @@ RUN apt-get update && apt-get install -y \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-## Install latest version of python packages
-RUN pip install \
-    argparse \
-    coverage \
-    versioneer
+## Install required python packages
+ADD requirements.txt /tmp/install
+RUN pip install -r /tmp/install
 
 ## Install pyrates package
 # using development version mounted from host for now
 
-VOLUME ['/data/fastq', '/data/assembled', '/data/test']
+VOLUME ["/data/fastq", "/data/assembled", "/data/test"]
 WORKDIR /code

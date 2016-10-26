@@ -1,7 +1,7 @@
 """Functions to facilitate consensus calling.
 """
 
-import logging
+import pyrates.utils as utils
 
 def grosslydifferent(seq1, seq2):
     """Partial comparison of sequences to determine whether
@@ -23,16 +23,34 @@ def grosslydifferent(seq1, seq2):
         return True
     return False
 
-def consensus(qidE, qidN, seqE, seqN, qseqE, qseqN, count, diffs):
+def update_qual(qual_cur, qual_new):
+    """Update quality sequence.
+
+    Args:
+        qual_cur (:obj:`str`): Qualities for stored sequence.
+        qual_new (:obj:`str`): Qualities for newly observed sequence.
+
+    Returns:
+        :obj:`str`: Updated quality scores.
+    """
+    qual_update = ""
+    for (qual1, qual2) in zip(qual_cur, qual_new):
+        if qual1 > qual2:
+            qual_update += qual1
+        else:
+            qual_update += qual2
+    return qual_update
+
+def consensus(id_qual_cur, id_qual_new, seq_cur, seq_new, qual_cur, qual_new, count, diffs):
     """Determine consensus value for this sequence.
 
     Args:
-        qidE (:obj:`str`): Qualities for stored ID sequence.
-        qidN (:obj:`str`): Qualities for ID of new sequence.
-        seqE (:obj:`str`): Existing consensus sequence.
-        seqN (:obj:`str`): New sequence to be merged into consensus.
-        qseqE (:obj:`str`): Quality value for existing consensus.
-        qseqN (:obj:`str`): Quality values for the new sequence.
+        id_qual_cur (:obj:`str`): Qualities for stored ID sequence.
+        id_qual_new (:obj:`str`): Qualities for ID of new sequence.
+        seq_cur (:obj:`str`): Existing consensus sequence.
+        seq_new (:obj:`str`): New sequence to be merged into consensus.
+        qual_cur (:obj:`str`): Quality value for existing consensus.
+        qual_new (:obj:`str`): Quality values for the new sequence.
         count (int): How many times has this sequence label been seen.
         diffs (:obj:`dict`): Sequence differences from the consensus
             observed so far.
@@ -46,43 +64,38 @@ def consensus(qidE, qidN, seqE, seqN, qseqE, qseqN, count, diffs):
             }
     """
 
-    logger = logging.getLogger(__name__)
+    logger = utils.get_logger(__name__)
     # better do some sanity checking
-    if len(qidE) != len(qidN):
+    if len(id_qual_cur) != len(id_qual_new):
         logger.error("Mismatch in id quality length, this should not happen. Check your input.")
-        logger.debug("Mismatching quality strings were '%s' and '%s'", qidE, qidN)
-        return {'qid':qidE, 'seq':seqE, 'qseq':qseqE}
+        logger.debug("Mismatching quality strings were '%s' and '%s'", id_qual_cur, id_qual_new)
+        return {'qid':id_qual_cur, 'seq':seq_cur, 'qseq':qual_cur}
 
-    if len(qseqE) != len(qseqN):
+    if len(qual_cur) != len(qual_new):
         logger.error("Mismatch in sequence quality length, this should not happen." + \
                      " Check your input.")
-        logger.debug("Mismatching sequence qualities were '%s' and '%s'", qseqE, qseqN)
-        return {'qid':qidE, 'seq':seqE, 'qseq':qseqE}
+        logger.debug("Mismatching sequence qualities were '%s' and '%s'", qual_cur, qual_new)
+        return {'qid':id_qual_cur, 'seq':seq_cur, 'qseq':qual_cur}
 
     # step through quality and record highest at each step
-    id_qual_update = ""
-    for (i, qual) in enumerate(qidE):
-        if qual > qidN[i]:
-            id_qual_update += qual
-        else:
-            id_qual_update += qidN[i]
+    id_qual_update = update_qual(id_qual_cur, id_qual_new)
 
     # step through sequence, record highest quality at each step, want to save diffs
     # for changes to the sequence but not the quality
     seq_update = ""
     qual_update = ""
-    for (i, nuc) in enumerate(seqE):
+    for (i, (qual, nuc)) in enumerate(zip(qual_cur, seq_cur)):
         # regardless of sequence values we will remember the highest quality value
-        if qseqE[i] > qseqN[i]:
-            qual_update += nuc
+        if qual_cur[i] > qual_new[i]:
+            qual_update += qual
         else:
-            qual_update += qseqN[i]
+            qual_update += qual_new[i]
         # check if new sequence has different nucliotide value at this position
-        if seqN[i] != nuc:
+        if seq_new[i] != nuc:
             # if this position in the new sequence has higher quality reading than
             # the consensus then swap it in
-            if qseqN[i] > qseqE[i]:
-                seq_update += seqN[i]
+            if qual_new[i] > qual:
+                seq_update += seq_new[i]
             else:
                 seq_update += nuc
             # update diff to record reading discrepancy at this position
@@ -96,7 +109,7 @@ def consensus(qidE, qidN, seqE, seqN, qseqE, qseqN, count, diffs):
                 diffs[i]['N'] = 0
                 # update for count seen so far
                 diffs[i][nuc] = count
-            diffs[i][seqN[i]] += 1
+            diffs[i][seq_new[i]] += 1
             continue
 
         # sequences agree at this psoition, if diff exists then update

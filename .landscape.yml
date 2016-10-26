@@ -1,0 +1,7 @@
+ignore-paths:
+  - scripts
+  - versioneer.py
+  - pyrates/_version.py
+python-targets:
+  - 2
+  - 3

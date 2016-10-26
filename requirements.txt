@@ -1,0 +1,4 @@
+argparse
+cov-core == 1.15.0
+nose2 >= 0.3
+versioneer == 0.17

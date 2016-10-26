@@ -1,0 +1,9 @@
+[run]
+branch = True
+
+[report]
+omit = 
+    versioneer.py
+    setup.py
+    pyrates/_version.py
+    pyrates/test/*

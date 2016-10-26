@@ -25,7 +25,10 @@ you've identified a problem that you'd like to tackle, leave a comment to say so
 Use [feature branches](https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow)
 to work on new features and bug fixes. Feel free to create a pull request for the
 branch at anytime to initiate discussion. It is helpful to label pull requests for
-branches that are not yet ready for merging as `work-in-progress`.  
+branches that are not yet ready for merging as `work-in-progress`. When a pull request
+is created on GitHub it will trigger automatic checks by Travis CI, Coveralls and Landscape
+to ensure everything still works and is looking good. It is advisable to look at the output
+of these and fix any issues that may exist. 
 
 ## Contributing new features
 Got an idea for a new feature or an improvement for the core algorithm?
@@ -52,5 +55,5 @@ to print messages during program execution.
 * Avoid the use of module level loggers, just create one when needed.
 * Use `__name__` as name for loggers, except inside functions used as command-
   line scripts where you should use the package name instead. This will automatically
-  generate an appropriate hirarchy of loggers. 
+  generate an appropriate hierarchy of loggers.
 

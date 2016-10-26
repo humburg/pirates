@@ -13,6 +13,13 @@ def read(fname):
     """
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
+def dependencies(fname):
+    """ Read required packages from file.
+    This allows us to maintain a single list of dependencies that
+    can be used with 'pip install -r' as weel as for packaging.
+    """
+    return open(os.path.join(os.path.dirname(__file__), fname)).readlines()
+
 setup(
     name="pyrates",
     version=versioneer.get_version(),
@@ -35,4 +42,6 @@ setup(
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
     ],
+    install_require=dependencies('requirements.txt'),
+    test_suite='nose2.collector.collector',
 )
