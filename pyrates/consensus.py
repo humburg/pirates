@@ -1,121 +1,156 @@
 """Functions to facilitate consensus calling.
 """
 
+from collections import defaultdict
 import pyrates.utils as utils
 
-def grosslydifferent(seq1, seq2):
-    """Partial comparison of sequences to determine whether
-    they are substantially different.
+class Consensus(object):
+    """Consensus sequence inferred from observed read sequences.
 
     Args:
-        seq1 (string): First sequence.
-        seq2 (string): Second sequence.
+        uid (:obj:`pyrates.sequence.SequenceWithQuality`): The
+            unique molecular identifier associated with this
+            sequence.
+        sequence (:obj:`pyrates.sequence.SequenceWithQuality`): The
+            sequence of the first read that serves as the basis for the
+            subsequent consensus computations.
 
-    Returns:
-        bool: True if the sequences are considered too different
-        to warrant further comparison.
+    Attributes:
+        uid (:obj:`pyrates.sequence.SequenceWithQuality`): The
+            unique molecular identifier associated with the
+            consensus sequence.
+        sequence (:obj:`pyrates.sequence.SequenceWithQuality`): The
+            consensus sequence.
+        diffs (:obj:`dict`): A collection of all sequence
+            differences observed between the consensus and the
+            underlying reads.
+        size (:obj:`int`): Number of reads used to compute the consensus.
+        different (:obj:`int`): Number of times consensus computation failed
+            because the other sequence was too different.
+        shorter (:obj:`int`): Number of times consensus computation failed
+            because the other read was too short.
+        longer (:obj:`int`): Number of times consensus computation failed
+            because the other read was too long.
     """
-    diff = 0
-    for i in range(10):
-        if seq1[i] != seq2[i]:
-            diff = diff + 1
-    if diff >= 8:
-        return True
-    return False
+    __slots__ = 'uid', 'sequence', 'diffs', 'size', 'different', 'shorter', 'longer'
+    _logger = utils.get_logger(__name__)
+    def __init__(self, uid, sequence):
+        self.uid = uid
+        self.sequence = sequence
+        self.diffs = defaultdict(lambda: defaultdict(int))
+        self.size = 1
+        self.different = 0
+        self.shorter = 0
+        self.longer = 0
 
-def update_qual(qual_cur, qual_new):
-    """Update quality sequence.
+    def _update_uid(self, uid_other):
+        """Update uid sequence and qualities.
 
-    Args:
-        qual_cur (:obj:`str`): Qualities for stored sequence.
-        qual_new (:obj:`str`): Qualities for newly observed sequence.
+        The provided :obj:`pyrates.sequence.SequenceWithQuality` is used
+        to update the current UID of this consensus sequence.
 
-    Returns:
-        :obj:`str`: Updated quality scores.
-    """
-    qual_update = ""
-    for (qual1, qual2) in zip(qual_cur, qual_new):
-        if qual1 > qual2:
-            qual_update += qual1
-        else:
-            qual_update += qual2
-    return qual_update
+        Note:
+            The current implementation assumes that the sequence is identical
+            and simply chooses the highest quality for each position.
 
-def consensus(id_qual_cur, id_qual_new, seq_cur, seq_new, qual_cur, qual_new, count, diffs):
-    """Determine consensus value for this sequence.
+        Args:
+            uid_other (:obj:`pyrates.sequence.SequenceWithQuality`): UID
+                sequence with associated qualities.
+        """
+        qual_update = list(self.uid.quality)
+        for (i, qual_other) in enumerate(uid_other.quality):
+            if qual_other > qual_update[i]:
+                qual_update[i] = qual_other
+        self.uid.quality = ''.join(qual_update)
 
-    Args:
-        id_qual_cur (:obj:`str`): Qualities for stored ID sequence.
-        id_qual_new (:obj:`str`): Qualities for ID of new sequence.
-        seq_cur (:obj:`str`): Existing consensus sequence.
-        seq_new (:obj:`str`): New sequence to be merged into consensus.
-        qual_cur (:obj:`str`): Quality value for existing consensus.
-        qual_new (:obj:`str`): Quality values for the new sequence.
-        count (int): How many times has this sequence label been seen.
-        diffs (:obj:`dict`): Sequence differences from the consensus
-            observed so far.
+    def update(self, uid_other, seq_other):
+        """Update consensus sequence.
 
-    Returns:
-        :obj:`dict`:
-            {
-                'qid': Cluster ID quality,
-                'seq': Consensus sequence,
-                'qseq': Consensus quality
-            }
-    """
+        The read represented by `seq_other` is added to the consensus.
 
-    logger = utils.get_logger(__name__)
-    # better do some sanity checking
-    if len(id_qual_cur) != len(id_qual_new):
-        logger.error("Mismatch in id quality length, this should not happen. Check your input.")
-        logger.debug("Mismatching quality strings were '%s' and '%s'", id_qual_cur, id_qual_new)
-        return {'qid':id_qual_cur, 'seq':seq_cur, 'qseq':qual_cur}
+        Args:
+            uid_other (:obj:`pyrates.sequence.SequenceWithQuality`): UID
+                sequence with associated qualities.
+            seq_other (:obj:`pyrates.sequence.SequenceWithQuality`): Read
+                sequence with associated qualities for read that is to be
+                added to the consensus.
 
-    if len(qual_cur) != len(qual_new):
-        logger.error("Mismatch in sequence quality length, this should not happen." + \
-                     " Check your input.")
-        logger.debug("Mismatching sequence qualities were '%s' and '%s'", qual_cur, qual_new)
-        return {'qid':id_qual_cur, 'seq':seq_cur, 'qseq':qual_cur}
+        Returns:
+            :obj:`bool`: `True` if the sequence was successfully added to the
+                consensus, `False` otherwise.
+        """
+        # better do some sanity checking
+        if len(self.uid) != len(uid_other):
+            self._logger.error("Mismatch in id quality length, this should not happen. " +
+                               "Check your input.")
+            self._logger.debug("Mismatching quality strings were '%s' and '%s'",
+                               self.uid.sequence, uid_other.sequence)
+            return False
 
-    # step through quality and record highest at each step
-    id_qual_update = update_qual(id_qual_cur, id_qual_new)
+        # if grossly different then just count this and move on
+        if self.sequence.grosslydifferent(seq_other):
+            self.different += 1
+            return False
 
-    # step through sequence, record highest quality at each step, want to save diffs
-    # for changes to the sequence but not the quality
-    seq_update = ""
-    qual_update = ""
-    for (i, (qual, nuc)) in enumerate(zip(qual_cur, seq_cur)):
+        # if sequence length is shorter, count this occurance, abandon this
+        # sequence and move on
+        if len(self.sequence) > len(seq_other):
+            self.shorter += 1
+            return False
+
+        # if new sequence is longer, count this occurance
+        # replace consensus sequence if built from only one other sequence
+        if len(self.sequence) < len(seq_other):
+            if self.size == 1:
+                self.sequence = seq_other
+                self.shorter += 1
+            else: self.longer += 1
+            return False
+
+        self._update_uid(uid_other)
+
+        # step through sequence, record highest quality at each step, want to save diffs
+        # for changes to the sequence but not the quality
+        seq_update = self.sequence.sequence
+        qual_update = self.sequence.quality
+        qual_other = seq_other.quality
+        seq_other = seq_other.sequence
+        max_qual = list(map(max, zip(zip(qual_update, seq_update, [0]*len(qual_update)),
+                                     zip(qual_other, seq_other, [1]*len(qual_other)))))
+        qual_update = [q[0] for q in max_qual]
+        diff = [s != o for s, o in zip(seq_update, seq_other)]
+        if any(diff):
+            for (i, is_diff) in enumerate(diff):
+                # check if new sequence has different nucliotide value at this position
+                if is_diff:
+                    nuc = seq_update[i]
+                    nuc_other = seq_other[i]
+                    # update diff to record reading discrepancy at this position
+                    if self.diffs[i][nuc] == 0:
+                        # update for count seen so far
+                        self.diffs[i][nuc] = self.size
+                    self.diffs[i][nuc_other] += 1
+                elif i in self.diffs:
+                    self.diffs[i][seq_update[i]] += 1
+            seq_update = [q[1] for q in max_qual]
+            self.sequence.sequence = ''.join(seq_update)
+        self.size += 1
+
         # regardless of sequence values we will remember the highest quality value
-        if qual_cur[i] > qual_new[i]:
-            qual_update += qual
-        else:
-            qual_update += qual_new[i]
-        # check if new sequence has different nucliotide value at this position
-        if seq_new[i] != nuc:
-            # if this position in the new sequence has higher quality reading than
-            # the consensus then swap it in
-            if qual_new[i] > qual:
-                seq_update += seq_new[i]
-            else:
-                seq_update += nuc
-            # update diff to record reading discrepancy at this position
-            if i not in diffs:
-                # create diff entry for this position
-                diffs[i] = {}
-                diffs[i]['A'] = 0
-                diffs[i]['G'] = 0
-                diffs[i]['C'] = 0
-                diffs[i]['T'] = 0
-                diffs[i]['N'] = 0
-                # update for count seen so far
-                diffs[i][nuc] = count
-            diffs[i][seq_new[i]] += 1
-            continue
+        self.sequence.quality = ''.join(map(max, zip(qual_update, qual_other)))
+        return True
 
-        # sequences agree at this psoition, if diff exists then update
-        seq_update += nuc
-        if i in diffs:
-            diffs[i][nuc] += 1
+    def __str__(self):
+        diff_str = ''
+        diff_pos = sorted(self.diffs)
+        for pos in diff_pos:
+            diff_str += " " + str(pos)
+            for nuc in sorted(self.diffs[pos]):
+                diff_str += nuc + str(self.diffs[pos][nuc])
+        return "@%d%s\n%s%s\n+\n%s%s" % (self.size, diff_str, self.uid.sequence,
+                                         self.sequence.sequence, self.uid.quality,
+                                         self.sequence.quality)
 
-    return {"qid": id_qual_update, "seq": seq_update, "qseq": qual_update}
-    
+    def __repr__(self):
+        return "Consensus(uid=%r, sequence=%r, diffs=%r, size=%r)" % \
+                         (self.uid, self.sequence, dict(self.diffs), self.size)

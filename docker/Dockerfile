@@ -18,6 +18,13 @@ RUN apt-get update && apt-get install -y \
 ADD requirements.txt /tmp/install
 RUN pip install -r /tmp/install
 
+## Install aditional packages for debugging and profiling
+RUN pip install line_profiler \
+                memory_profiler \
+                profiling \
+                psutil && \
+    rm -rf /root/.cache
+
 ## Install pyrates package
 # using development version mounted from host for now
 

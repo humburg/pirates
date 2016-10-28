@@ -3,88 +3,136 @@ Test consensus module.
 """
 from nose2.tools import params
 import pyrates.consensus as cons
+import pyrates.sequence as sequence
 
-def test_grosslydifferent_equal():
-    """Recognise identical sequences as similar"""
-    seq1 = 'AACTGTGAGTGTAGATGTTC'
-    assert not cons.grosslydifferent(seq1, seq1), \
-        "Sequence %s considered too different from itself" % seq1
-
-@params(('AACTGTGAGTGTAGATGTTC', 'AACTTTGAGTGTAGATGTTC'), \
-        ('AACTGTGAGTGTAGATGTTC', 'TTTTTTTTTTGTAGATGTTC'))
-def test_grosslydifferent_similar(seq1, seq2):
-    """Tolerate small differences between sequences."""
-    assert not cons.grosslydifferent(seq1, seq2), \
-        "Sequences %s and %s considered too different" % (seq1, seq2)
-
-def test_grosslydifferent_diff():
-    """Tolerate small differences between sequences."""
-    seq1 = 'AACTGTGAGTGTAGATGTTC'
-    seq2 = 'GTAGATGTTCGTAGATGTTC'
-    assert cons.grosslydifferent(seq1, seq2), \
-        "Sequences %s and %s considered similar" % (seq1, seq2)
+def test_consensus_new():
+    """Create objects of class Consensus"""
+    seq = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC", "IIIDIIIIIIIIIII")
+    id_seq = sequence.SequenceWithQuality("AAA", "III")
+    consensus = cons.Consensus(id_seq, seq)
+    assert consensus.sequence == seq
+    assert consensus.uid == id_seq
+    assert consensus.size == 1
 
 def test_consensus_idlen():
     """Skip sequences with incompatible IDs"""
-    qual_id1 = "IIII"
-    qual_id2 = "IIIII"
-    (seq1, qual_seq1) = ("AACTGTGAGTGTAGATGTTC", "I"*20)
-    consensus = cons.consensus(qual_id1, qual_id2, seq1, seq1, qual_seq1, qual_seq1, 1, {})
-    expect = {'qid':qual_id1, 'seq':seq1, 'qseq':qual_seq1}
-    assert consensus == expect, "%r != %r" % (consensus, expect)
+    id1 = sequence.SequenceWithQuality("AAAA", "IIII")
+    id2 = sequence.SequenceWithQuality("AAAAA", "IIIII")
+    seq = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC", "IIIDIIIIIIIIIII")
+
+    consensus = cons.Consensus(id1, seq)
+    success = consensus.update(id2, seq)
+    assert not success
+    assert consensus.uid == id1, "%r != %r" % (consensus.uid, id1)
 
 def test_consensus_seqlen():
-    """Skip sequences with different lengths"""
-    qual_id1 = "IIII"
-    (seq1, qual_seq1) = ("AACTGTGAGTGTAGATGTTC", "I"*20)
-    (seq2, qual_seq2) = ("AACTGTGAGTGTAGATGTTCTGTA", "I"*24)
-    consensus = cons.consensus(qual_id1, qual_id1, seq1, seq2, qual_seq1, qual_seq2, 1, {})
-    expect = {'qid':qual_id1, 'seq':seq1, 'qseq':qual_seq1}
-    assert consensus == expect, "%r != %r" % (consensus, expect)
+    """Skip shorter sequences"""
+    id1 = sequence.SequenceWithQuality("AAAA", "IIII")
+    seq1 = sequence.SequenceWithQuality("AACTGTGAGTGTAGATGTTCTGTA", "I"*24)
+    seq2 = sequence.SequenceWithQuality("AACTGTGAGTGTAGATGTTC", "I"*20)
+    consensus = cons.Consensus(id1, seq1)
+    success = consensus.update(id1, seq2)
+    assert not success
+    assert consensus.sequence == seq1, "%r != %r" % (consensus.sequence, seq1)
+    assert consensus.shorter == 1, "Skipped sequence not recorded"
+
+    consensus = cons.Consensus(id1, seq2)
+    success = consensus.update(id1, seq1)
+    assert not success
+    assert consensus.sequence == seq1, "%r != %r" % (consensus.sequence, seq1)
+    assert consensus.shorter == 1, "Skipped sequence not recorded"
+
+    consensus = cons.Consensus(id1, seq2)
+    success = consensus.update(id1, seq2)
+    assert success
+    success = consensus.update(id1, seq1)
+    assert not success
+    assert consensus.sequence == seq2, "%r != %r" % (consensus.sequence, seq2)
+    assert consensus.longer == 1, "Skipped sequence not recorded"
+
+def test_consensus_skip():
+    """Reject sequences that are too different"""
+    uid = sequence.SequenceWithQuality("AAA", "III")
+    seq1 = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC", "IIIDIIIIIIIIIII")
+    seq2 = sequence.SequenceWithQuality("TTCTCCCTGGTAAGC", "IIIDIIIIIIIIIII")
+    consensus = cons.Consensus(uid, seq1)
+    success = consensus.update(uid, seq2)
+    assert not success
+    assert consensus.sequence == seq1, "%r != %r" % (consensus.sequence, seq1)
+    assert consensus.different == 1, "Skipped sequence not counted"
 
 @params(('qqqqq', 'IIIII', 'qqqqq'), \
         ('IIIII', 'qqqqq', 'qqqqq'), \
         ('abcde', 'edcba', 'edcde'))
-def test_update_qual(qual1, qual2, expect):
+def test_update_uid(qual1, qual2, expect):
     """Retain highest quality"""
-    updated = cons.update_qual(qual1, qual2)
-    assert updated == expect, \
-           "Failed to retain high quality sequence (%s != %s)" % (updated, expect)
+    id1 = sequence.SequenceWithQuality("A"*len(qual1), qual1)
+    id2 = sequence.SequenceWithQuality("A"*len(qual2), qual2)
+    seq = sequence.SequenceWithQuality("A"*20, "I"*20)
+    consensus = cons.Consensus(id1, seq)
+    consensus._update_uid(id2)
+    assert consensus.uid.quality == expect, \
+           "Failed to retain high quality sequence (%r != %r)" % (consensus.uid.quality, expect)
 
 def test_consensus_seq():
     """Compute consensus sequence"""
-    seq1 = "ACTGTTTGTCTAAGC"
-    seq2 = "ACTTTTTGTCTTAGC"
-    qual1 = "IIIDIIIIIIIIIII"
-    qual2 = "IIIIIIIIIDIDIII"
-    diffs = {}
-    consensus = cons.consensus('IIII', 'IIII', seq1, seq2, qual1, qual2, 1, diffs)
+    id1 = sequence.SequenceWithQuality("AAAA", "IIII")
+    seq1 = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC", "IIIDIIIIIIIIIII")
+    seq2 = sequence.SequenceWithQuality("ACTTTTTGTCTTAGC", "IIIIIIIIIDIDIII")
+    consensus = cons.Consensus(id1, seq2)
+    success = consensus.update(id1, seq1)
+
     seq_expect = "ACTTTTTGTCTAAGC"
     qual_expect = "I"*len(seq_expect)
-    diff_expect = {3:{'A':0, 'C':0, 'T':1, 'G':1, 'N':0}, 11:{'A':1, 'C':0, 'T':1, 'G':0, 'N':0}}
-    assert consensus['seq'] == seq_expect, \
-           "Failed to update consensus (%s != %s)" % (consensus['seq'], seq_expect)
-    assert consensus['qseq'] == qual_expect, \
-           "Failed to update qualities (%s != %s)" % (consensus['qseq'], qual_expect)
-    assert diffs == diff_expect, \
-           "Incorrect sequence diff (%r != %r)" % (diffs, diff_expect)
+    diff_expect = {3:{'T':1, 'G':1}, 11:{'A':1, 'T':1}}
+    assert success, "Sequence %r was rejected" % seq1
+    assert consensus.sequence.sequence == seq_expect, \
+           "Failed to update consensus (%s != %s)" % (consensus.sequence.sequence, seq_expect)
+    assert consensus.sequence.quality == qual_expect, \
+           "Failed to update qualities (%s != %s)" % (consensus.sequence.quality, qual_expect)
+    assert consensus.diffs == diff_expect, \
+           "Incorrect sequence diff (%r != %r)" % (consensus.diffs, diff_expect)
 
 def test_consensus_diff():
     """Update sequence diff"""
-    seq1 = "ACTTTTTGTCTAAGC"
-    seq2 = "ACTTTTTGTGTTAGC"
-    qual1 = "IIIIIIIIIIIIIII"
-    qual2 = "IIIIIIIIIqIDIII"
-    diffs = {3:{'A':0, 'C':0, 'T':1, 'G':1, 'N':0}, 11:{'A':1, 'C':0, 'T':1, 'G':0, 'N':0}}
-    consensus = cons.consensus('IIII', 'IIII', seq1, seq2, qual1, qual2, 2, diffs)
+    id1 = sequence.SequenceWithQuality("AAAA", "IIII")
+    seq1 = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC", "IIIDIIIIIIIIIII")
+    seq2 = sequence.SequenceWithQuality("ACTTTTTGTCTTAGC", "IIIIIIIIIDIDIII")
+    seq3 = sequence.SequenceWithQuality("ACTTTTTGTGTTAGC", "IIIIIIIIIqIDIII")
+    consensus = cons.Consensus(id1, seq2)
+    success = consensus.update(id1, seq1)
+
+    assert success, "Sequence %r was rejected" % seq1
+    success = consensus.update(id1, seq3)
+
     seq_expect = "ACTTTTTGTGTAAGC"
     qual_expect = "IIIIIIIIIqIIIII"
-    diff_expect = {3:{'A':0, 'C':0, 'T':2, 'G':1, 'N':0},
-                   11:{'A':1, 'C':0, 'T':2, 'G':0, 'N':0},
-                   9:{'A':0, 'C':2, 'T':0, 'G':1, 'N':0}}
-    assert consensus['seq'] == seq_expect, \
-           "Failed to update consensus (%s != %s)" % (consensus['seq'], seq_expect)
-    assert consensus['qseq'] == qual_expect, \
-           "Failed to update qualities (%s != %s)" % (consensus['qseq'], qual_expect)
-    assert diffs == diff_expect, \
-           "Incorrect sequence diff (%r != %r)" % (diffs, diff_expect)
+    diff_expect = {3:{'T':2, 'G':1},
+                   11:{'A':1, 'T':2},
+                   9:{'C':2, 'G':1}}
+    assert success, "Sequence %r was rejected" % seq3
+    assert consensus.sequence.sequence == seq_expect, \
+           "Failed to update consensus (%s != %s)" % (consensus.sequence.sequence, seq_expect)
+    assert consensus.sequence.quality == qual_expect, \
+           "Failed to update qualities (%s != %s)" % (consensus.sequence.quality, qual_expect)
+    assert consensus.diffs == diff_expect, \
+           "Incorrect sequence diff (%r != %r)" % (consensus.diffs, diff_expect)
+
+def test_consensus_str():
+    """String representation of consensus sequences"""
+    id1 = sequence.SequenceWithQuality("AAAA", "IIII")
+    seq1 = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC", "IIIDIIIIIIIIIII")
+    seq2 = sequence.SequenceWithQuality("ACTTTTTGTCTTAGC", "IIIIIIIIIDIDIII")
+    consensus = cons.Consensus(id1, seq1)
+    expect_str1 = "@1\nAAAAACTGTTTGTCTAAGC\n+\nIIIIIIIDIIIIIIIIIII"
+    expect_repr1 = "Consensus(uid=SequenceWithQuality(sequence='AAAA', " + \
+                                                     "quality='IIII', name=''), " + \
+                   "sequence=SequenceWithQuality(sequence='ACTGTTTGTCTAAGC', " + \
+                                                "quality='IIIDIIIIIIIIIII', name=''), " + \
+                   "diffs={}, size=1)"
+    expect_str2 = "@2 3G1T1 11A1T1\nAAAAACTTTTTGTCTAAGC\n+\nIIIIIIIIIIIIIIIIIII"
+
+    assert str(consensus) == expect_str1, "\n%s\n!=\n%s" % (consensus, expect_str1)
+    assert repr(consensus) == expect_repr1, "\n%r\n!=\n%r" % (consensus, expect_repr1)
+    consensus.update(id1, seq2)
+    assert str(consensus) == expect_str2, "\n%s\n!=\n%s" % (str(consensus), expect_str2)

@@ -31,4 +31,3 @@ def get_logger(name, level='NOTSET', handlers=None):
         for handler in handlers:
             logger.addHandler(handler)
     return logger
-
