@@ -50,22 +50,24 @@ class SequenceWithQuality(object):
                              (len(self), value, len(value)))
         self._quality = value
 
-    def grosslydifferent(self, other):
+    def grosslydifferent(self, other, length=10, tolerance=7):
         """Partial comparison of sequences to determine whether
         they are substantially different.
 
         Args:
             other (:obj:`pyrates.sequence.SequenceWithQuality`): Sequence to compare to.
+            length (:obj:`int`, optional): length of the prefix to test.
+            tolerance (:obj:`int`, optional): Maximum number of mismatches allowed.
 
         Returns:
             :obj:`bool`: True if the sequences are considered too different
             to warrant further comparison.
         """
         diff = 0
-        for i in range(10):
+        for i in range(length):
             if self._sequence[i] != other.sequence[i]:
                 diff = diff + 1
-        if diff >= 8:
+        if diff > tolerance:
             return True
         return False
 
