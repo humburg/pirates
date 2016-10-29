@@ -1,7 +1,10 @@
 """Functions to facilitate consensus calling.
 """
 
+import logging
 from collections import defaultdict
+
+import pyrates.sequence as pseq
 import pyrates.utils as utils
 
 class Consensus(object):
@@ -63,7 +66,7 @@ class Consensus(object):
                 qual_update[i] = qual_other
         self.uid.quality = ''.join(qual_update)
 
-    def update(self, uid_other, seq_other, size_other=1):
+    def update(self, uid_other, seq_other, size_other=1, discard=True):
         """Update consensus sequence.
 
         The read represented by `seq_other` is added to the consensus.
@@ -76,6 +79,11 @@ class Consensus(object):
                 added to the consensus.
             size_other (:obj:`int`, optional): Treat the sequence provided for
                 updating as a representative of this many sequences.
+            discard (:obj:`bool`, optional): If this is `True` sequences that
+                are rejected for consensus computations are counted and are
+                assumed to be excluded from further concideration. They are
+                essentially assigned to this cluster but don't affect the
+                consensus sequence.
 
         Returns:
             :obj:`bool`: `True` if the sequence was successfully added to the
@@ -91,22 +99,25 @@ class Consensus(object):
 
         # if grossly different then just count this and move on
         if self.sequence.grosslydifferent(seq_other):
-            self.different += size_other
+            if discard:
+                self.different += size_other
             return False
 
         # if sequence length is shorter, count this occurance, abandon this
         # sequence and move on
         if len(self.sequence) > len(seq_other):
-            self.shorter += size_other
+            if discard:
+                self.shorter += size_other
             return False
 
         # if new sequence is longer, count this occurance
         # replace consensus sequence if built from only one other sequence
         if len(self.sequence) < len(seq_other):
-            if self.size == 1:
-                self.sequence = seq_other
-                self.shorter += size_other
-            else: self.longer += size_other
+            if discard:
+                if self.size == 1:
+                    self.sequence = seq_other
+                    self.shorter += size_other
+                else: self.longer += size_other
             return False
 
         self._update_uid(uid_other)
@@ -158,7 +169,7 @@ class Consensus(object):
         """
         if self.uid.grosslydifferent(other.uid, len(self.uid), tolerance):
             return False
-        return self.update(other.uid, other.sequence, other.size)
+        return self.update(other.uid, other.sequence, other.size, discard=False)
 
     def __str__(self):
         diff_str = ''
@@ -174,3 +185,48 @@ class Consensus(object):
     def __repr__(self):
         return "Consensus(uid=%r, sequence=%r, diffs=%r, size=%r)" % \
                          (self.uid, self.sequence, dict(self.diffs), self.size)
+
+def from_fastq(input_file, id_length, adapter):
+    """Read FASTQ file to generate consensus sequences.
+
+    Args:
+        input_file (:obj:`str`): Name of input file.
+        id_length (:obj:`int`): Length of UID sequence at beginning/end of read.
+        adapter (:obj:`str`): Adapter sequence.
+
+    Returns:
+        :obj:`dict`: Computed consensus sequences.
+    """
+    logger = utils.get_logger(__name__)
+    line_count = 0
+    total_skipped = 0
+    seq = {}
+    id_length = id_length
+    adapt_length = id_length + len(adapter)
+
+    open_fun = utils.smart_open(input_file)
+    with open_fun(input_file) as fastq:
+        for line in fastq:
+            # print out some stats as we go
+            if logger.isEnabledFor(logging.DEBUG) and (line_count % 100000) == 0:
+                logger.debug("reads: %d clusters: %d skipped: %d",
+                             line_count/4, len(seq), total_skipped)
+            elif (line_count % 4) == 1:
+                line = line.rstrip("\n")
+                nameid = line[0:id_length] + line[-id_length:]
+                sequence = line[adapt_length:-adapt_length]
+            elif (line_count % 4) == 3:
+                line = line.rstrip("\n")
+                qnameid = line[0:id_length] + line[-id_length:]
+                qsequence = line[adapt_length:-adapt_length]
+
+                uid = pseq.SequenceWithQuality(nameid, qnameid)
+                read_seq = pseq.SequenceWithQuality(sequence, qsequence)
+                if nameid not in seq:
+                    seq[nameid] = Consensus(uid, read_seq)
+                else:
+                    success = seq[nameid].update(uid, read_seq)
+                    if not success:
+                        total_skipped += 1
+            line_count += 1
+    return seq

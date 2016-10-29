@@ -1,6 +1,7 @@
 """Utility functions used in other modules"""
 
 import logging
+import gzip
 
 def console_handler():
     """Create a handler for logging to the console.
@@ -31,3 +32,9 @@ def get_logger(name, level='NOTSET', handlers=None):
         for handler in handlers:
             logger.addHandler(handler)
     return logger
+
+def smart_open(file_name):
+    access_fun = open
+    if file_name.endswith('.gz'):
+        access_fun = gzip.open
+    return access_fun

@@ -10,9 +10,9 @@ import logging
 
 import pyrates.consensus as cons
 import pyrates.utils as utils
-import pyrates.sequence as pseq
 from . import __version__
 from ._version import get_versions
+
 
 def main():
     """Entrypoint for command-line interface
@@ -83,44 +83,11 @@ def main():
         logger.warning("Merging of small clusters is disabled.")
     logger.info('Consensus sequences will go to ' + args.output)
 
-    input_fun = open
-    if args.fastq.endswith('.gz'):
-        input_fun = gzip.open
-    output_fun = open
-    if args.output.endswith('.gz'):
-        output_fun = gzip.open
+    output_fun = utils.smart_open(args.output)
 
     ## start consensus computation
     started_at = time.time()
-    line_count = 0
-    total_skipped = 0
-    seq = {}
-    id_length = args.id_length
-    adapt_length = args.id_length + len(args.adapter)
-    with input_fun(args.fastq) as fastq:
-        for line in fastq:
-            # print out some stats as we go
-            if logger.isEnabledFor(logging.DEBUG) and (line_count % 100000) == 0:
-                logger.debug("reads: %d clusters: %d skipped: %d",
-                             line_count/4, len(seq), total_skipped)
-            elif (line_count % 4) == 1:
-                line = line.rstrip("\n")
-                nameid = line[0:id_length] + line[-id_length:]
-                sequence = line[adapt_length:-adapt_length]
-            elif (line_count % 4) == 3:
-                line = line.rstrip("\n")
-                qnameid = line[0:id_length] + line[-id_length:]
-                qsequence = line[adapt_length:-adapt_length]
-
-                uid = pseq.SequenceWithQuality(nameid, qnameid)
-                read_seq = pseq.SequenceWithQuality(sequence, qsequence)
-                if nameid not in seq:
-                    seq[nameid] = cons.Consensus(uid, read_seq)
-                else:
-                    success = seq[nameid].update(uid, read_seq)
-                    if not success:
-                        total_skipped += 1
-            line_count += 1
+    seq = cons.from_fastq(args.fastq, args.id_length, args.adapter)
 
     if logger.isEnabledFor(logging.INFO):
         total_different = 0
@@ -149,7 +116,7 @@ def main():
             targets = []
             merge_count = 0
             for (seq_count, uid) in enumerate(seq):
-                if logger.isEnabledFor(logging.DEBUG) and seq_count % 10000 == 0:
+                if logger.isEnabledFor(logging.DEBUG) and seq_count % 100 == 0:
                     logger.debug("clusters: %d, merged: %d, small: %d, targets: %d",
                                  seq_count, merge_count, len(candidates), len(targets))
                 if seq[uid].size <= args.merge_size:
