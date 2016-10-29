@@ -63,7 +63,7 @@ class Consensus(object):
                 qual_update[i] = qual_other
         self.uid.quality = ''.join(qual_update)
 
-    def update(self, uid_other, seq_other):
+    def update(self, uid_other, seq_other, size_other=1):
         """Update consensus sequence.
 
         The read represented by `seq_other` is added to the consensus.
@@ -74,6 +74,8 @@ class Consensus(object):
             seq_other (:obj:`pyrates.sequence.SequenceWithQuality`): Read
                 sequence with associated qualities for read that is to be
                 added to the consensus.
+            size_other (:obj:`int`, optional): Treat the sequence provided for
+                updating as a representative of this many sequences.
 
         Returns:
             :obj:`bool`: `True` if the sequence was successfully added to the
@@ -89,13 +91,13 @@ class Consensus(object):
 
         # if grossly different then just count this and move on
         if self.sequence.grosslydifferent(seq_other):
-            self.different += 1
+            self.different += size_other
             return False
 
         # if sequence length is shorter, count this occurance, abandon this
         # sequence and move on
         if len(self.sequence) > len(seq_other):
-            self.shorter += 1
+            self.shorter += size_other
             return False
 
         # if new sequence is longer, count this occurance
@@ -103,8 +105,8 @@ class Consensus(object):
         if len(self.sequence) < len(seq_other):
             if self.size == 1:
                 self.sequence = seq_other
-                self.shorter += 1
-            else: self.longer += 1
+                self.shorter += size_other
+            else: self.longer += size_other
             return False
 
         self._update_uid(uid_other)
@@ -129,16 +131,34 @@ class Consensus(object):
                     if self.diffs[i][nuc] == 0:
                         # update for count seen so far
                         self.diffs[i][nuc] = self.size
-                    self.diffs[i][nuc_other] += 1
+                    self.diffs[i][nuc_other] += size_other
                 elif i in self.diffs:
-                    self.diffs[i][seq_update[i]] += 1
+                    self.diffs[i][seq_update[i]] += size_other
             seq_update = [q[1] for q in max_qual]
             self.sequence.sequence = ''.join(seq_update)
-        self.size += 1
+        self.size += size_other
 
         # regardless of sequence values we will remember the highest quality value
         self.sequence.quality = ''.join(map(max, zip(qual_update, qual_other)))
         return True
+
+    def merge(self, other, tolerance):
+        """Merge two consensus sequences.
+
+        Merging will only be attempted if the UIDs don't differ at more than `tolerance`
+        positions.
+
+        Args:
+            other (:obj:`pyrates.consensus.Consensus`): The consensus sequence to merge into
+                this one.
+            tolerance (:obj:`int`): The maximum number of differences between UIDs.
+
+        Returns:
+            :obj:`bool`: `True` if the sequences were successfully merged, `False` otherwise.
+        """
+        if self.uid.grosslydifferent(other.uid, len(self.uid), tolerance):
+            return False
+        return self.update(other.uid, other.sequence, other.size)
 
     def __str__(self):
         diff_str = ''

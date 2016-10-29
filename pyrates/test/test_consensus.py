@@ -136,3 +136,39 @@ def test_consensus_str():
     assert repr(consensus) == expect_repr1, "\n%r\n!=\n%r" % (consensus, expect_repr1)
     consensus.update(id1, seq2)
     assert str(consensus) == expect_str2, "\n%s\n!=\n%s" % (str(consensus), expect_str2)
+
+def test_merge_simple():
+    """Combine two consensus sequences"""
+    id1 = sequence.SequenceWithQuality("AAAA", "IIII")
+    id2 = sequence.SequenceWithQuality("AACA", "IIII")
+    seq = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC", "IIIDIIIIIIIIIII")
+    cons1 = cons.Consensus(id1, seq)
+    cons2 = cons.Consensus(id2, seq)
+    merged = cons1.merge(cons2, 1)
+    assert merged, "Merging failed unexpectedly"
+    assert cons1.size == 2, "Incorrect size for merged cluster (%d != %d)" % (cons1.size, 2)
+    assert cons1.sequence.sequence == seq.sequence, "Incorrect merged sequence (%r != %r)" % \
+                                           (cons1.sequence.sequence, seq.sequence)
+
+def test_merge_fail_uid():
+    """Don't merge sequences with very different UIDs'"""
+    id1 = sequence.SequenceWithQuality("AAAA", "IIII")
+    id2 = sequence.SequenceWithQuality("CCAA", "IIII")
+    seq = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC", "IIIDIIIIIIIIIII")
+    cons1 = cons.Consensus(id1, seq)
+    cons2 = cons.Consensus(id2, seq)
+    merged = cons1.merge(cons2, 1)
+    assert not merged, "Merging succeeded unecpectedly"
+
+def test_merge_size():
+    """Update size of merged clusters"""
+    id1 = sequence.SequenceWithQuality("AAAA", "IIII")
+    id2 = sequence.SequenceWithQuality("AACA", "IIII")
+    seq = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC", "IIIDIIIIIIIIIII")
+    cons1 = cons.Consensus(id1, seq)
+    cons1.update(id1, seq)
+    cons2 = cons.Consensus(id2, seq)
+    cons2.update(id2, seq)
+    merged = cons1.merge(cons2, 1)
+    assert merged, "Merging failed unexpectedly"
+    assert cons1.size == 4, "Incorrect size for merged cluster (%d != %d)" % (cons1.size, 4)
