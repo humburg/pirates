@@ -3,7 +3,6 @@
 
 import argparse
 import datetime
-import gzip
 import resource
 import time
 import logging
@@ -116,7 +115,7 @@ def main():
             targets = []
             merge_count = 0
             for (seq_count, uid) in enumerate(seq):
-                if logger.isEnabledFor(logging.DEBUG) and seq_count % 100 == 0:
+                if logger.isEnabledFor(logging.DEBUG) and seq_count % 10000 == 0:
                     logger.debug("clusters: %d, merged: %d, small: %d, targets: %d",
                                  seq_count, merge_count, len(candidates), len(targets))
                 if seq[uid].size <= args.merge_size:
