@@ -122,19 +122,21 @@ class Consensus(object):
 
         self._update_uid(uid_other)
 
-        # step through sequence, record highest quality at each step, want to save diffs
-        # for changes to the sequence but not the quality
+        # Step through sequence, record highest quality at each step, want to save diffs
+        # for changes to the sequence but not the quality.
+        # If we encounter a mismatch between consensus and newly observed read,
+        # keep the current sequence
         seq_update = self.sequence.sequence
         qual_update = self.sequence.quality
         qual_other = seq_other.quality
         seq_other = seq_other.sequence
-        max_qual = list(map(max, zip(zip(qual_update, seq_update, [0]*len(qual_update)),
-                                     zip(qual_other, seq_other, [1]*len(qual_other)))))
+        max_qual = list(map(max, zip(zip(qual_other, [0]*len(qual_other), seq_other),
+                                     zip(qual_update, [1]*len(qual_update), seq_update))))
         qual_update = [q[0] for q in max_qual]
         diff = [s != o for s, o in zip(seq_update, seq_other)]
         if any(diff):
             for (i, is_diff) in enumerate(diff):
-                # check if new sequence has different nucliotide value at this position
+                # check if new sequence has different nucleotide at this position
                 if is_diff:
                     nuc = seq_update[i]
                     nuc_other = seq_other[i]
@@ -145,7 +147,7 @@ class Consensus(object):
                     self.diffs[i][nuc_other] += size_other
                 elif i in self.diffs:
                     self.diffs[i][seq_update[i]] += size_other
-            seq_update = [q[1] for q in max_qual]
+            seq_update = [q[2] for q in max_qual]
             self.sequence.sequence = ''.join(seq_update)
         self.size += size_other
 
