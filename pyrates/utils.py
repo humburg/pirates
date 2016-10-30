@@ -34,6 +34,14 @@ def get_logger(name, level='NOTSET', handlers=None):
     return logger
 
 def smart_open(file_name):
+    """Choose function to open a file based on its extension
+
+    Args:
+        file_name (:obj:`str`): Name of the file to be opened.
+
+    Returns:
+        :obj:`function` appropriate for opening a file with the given name.
+    """
     access_fun = open
     if file_name.endswith('.gz'):
         access_fun = gzip.open

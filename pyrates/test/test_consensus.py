@@ -2,8 +2,14 @@
 Test consensus module.
 """
 from nose2.tools import params
+from nose2.tools.decorators import with_setup, with_teardown
 import pyrates.consensus as cons
 import pyrates.sequence as sequence
+from pyrates.test import TMP
+from pyrates.test.fixtures import setup_fastq_simple, \
+                                  teardown_fastq_simple, \
+                                  setup_fastq_mismatch, \
+                                  teardown_fastq_mismatch
 
 def test_consensus_new():
     """Create objects of class Consensus"""
@@ -172,3 +178,42 @@ def test_merge_size():
     merged = cons1.merge(cons2, 1)
     assert merged, "Merging failed unexpectedly"
     assert cons1.size == 4, "Incorrect size for merged cluster (%d != %d)" % (cons1.size, 4)
+
+@with_setup(setup_fastq_simple)
+@with_teardown(teardown_fastq_simple)
+def test_fastq_simple():
+    """Create consensus from fastq file."""
+    cluster = cons.from_fastq(TMP + 'simple.fastq', 4, 'ACGT')
+    uid1_expect = 'AAAACCCC'
+    uid2_expect = 'CCCCAAAA'
+    seq1_expect = 'ACCTCTCCCTGTGGGTCATGTGACT'
+    seq2_expect = 'TTGTTTGAAAAACCTCGAAAGTAAC'
+
+    assert uid1_expect in cluster, "%r not in %r" % (uid1_expect, list(cluster.keys()))
+    assert uid2_expect in cluster, "%r not in %r" % (uid2_expect, list(cluster.keys()))
+    assert cluster[uid1_expect].sequence.sequence == seq1_expect, \
+           "%r != %r" % (cluster[uid1_expect].sequence.sequence, seq1_expect)
+    assert cluster[uid2_expect].sequence.sequence == seq2_expect, \
+           "%r != %r" % (cluster[uid2_expect].sequence.sequence, seq2_expect)
+
+@with_setup(setup_fastq_mismatch)
+@with_teardown(teardown_fastq_mismatch)
+def test_fastq_mismatch():
+    """Create consensus from reads with mismatches in cluster."""
+    cluster = cons.from_fastq(TMP + 'mismatch.fastq', 4, 'ACGT')
+    uid1_expect = 'AAAACCCC'
+    uid2_expect = 'CCCCAAAA'
+    uid3_expect = 'AAAAAAAA'
+    seq1_expect = 'ACCTCTCCCTGTGGGTCATGTGACT'
+    seq2_expect = 'TTGTTTGAAAAACCTCGAAAGTAAC'
+    seq3_expect = 'CATTTTTGTGTCCAATGCCTAAATT'
+
+    assert uid1_expect in cluster, "%r not in %r" % (uid1_expect, list(cluster.keys()))
+    assert uid2_expect in cluster, "%r not in %r" % (uid2_expect, list(cluster.keys()))
+    assert uid3_expect in cluster, "%r not in %r" % (uid3_expect, list(cluster.keys()))
+    assert cluster[uid1_expect].sequence.sequence == seq1_expect, \
+           "%r != %r" % (cluster[uid1_expect].sequence.sequence, seq1_expect)
+    assert cluster[uid2_expect].sequence.sequence == seq2_expect, \
+           "%r != %r" % (cluster[uid2_expect].sequence.sequence, seq2_expect)
+    assert cluster[uid3_expect].sequence.sequence == seq3_expect, \
+           "%r != %r" % (cluster[uid3_expect].sequence.sequence, seq3_expect)
