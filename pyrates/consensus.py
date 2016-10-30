@@ -232,3 +232,81 @@ def from_fastq(input_file, id_length, adapter):
                         total_skipped += 1
             line_count += 1
     return seq
+
+def to_fastq(seq, output_file, id_tolerance, merge_size, merge_target):
+    """Write consensus sequences to fastq file, optionally merging clusters.
+
+    If merging of small clusters can be enabled by setting all relevant arguments
+    (`id_tolerance`, `merge_size`, `merge_target`) to positive values. If this is
+    the case clusters smaller than `merge_size` will be compared to all clusters
+    with no more than `merge_target` members. If their UIDs don't differ at more
+    than `id_tolerance` positions an attempt will be made to merge the two clusters,
+    but the attempt may fail if the sequences are too different (using the same
+    logic employed when computing the initial consensus).
+
+    Args:
+        seq (:obj:`dict`): Read clusters and their consensus sequences, identified
+            by the sequence of their UIDs.
+        output_file (:obj:`str`): File name for output. Will be replaced if it exists.
+        id_tolerance (:obj:`int`): Maximum number of mismatches between UIDs allowed
+            for merging of clusters.
+        merge_size (:obj:`int`): Maximum size for *small* clusters that will be considered
+            for merging.
+        merge_target (:obj:`int`): Only clusters that are not larger than this are
+            considered when trying to find matches for small clusters.
+    """
+    logger = utils.get_logger(__name__)
+    output_fun = utils.smart_open(output_file)
+    with output_fun(output_file, 'w') as output:
+        if merge_size and merge_target:
+            logger.info('Merging small clusters')
+            candidates = []
+            targets = []
+            merge_count = 0
+            for (seq_count, uid) in enumerate(seq):
+                if logger.isEnabledFor(logging.DEBUG) and seq_count % 10000 == 0:
+                    logger.debug("clusters: %d, merged: %d, small: %d, targets: %d",
+                                 seq_count, merge_count, len(candidates), len(targets))
+                if seq[uid].size <= merge_size:
+                    merged = False
+                    for consensus in targets:
+                        merged = consensus.merge(seq[uid], id_tolerance)
+                        if merged:
+                            merge_count += 1
+                            break
+                    if not merged:
+                        ## attempt merging with other candidates
+                        remove = None
+                        for (i, cand) in enumerate(candidates):
+                            merged = seq[uid].merge(cand, id_tolerance)
+                            if merged:
+                                merge_count += 1
+                                remove = i
+                                break
+                        if merged:
+                            del candidates[remove]
+                            if seq[uid].size > merge_size:
+                                targets.append(seq[uid])
+                            else:
+                                candidates.append(seq[uid])
+                        else:
+                            candidates.append(seq[uid])
+                elif seq[uid].size <= merge_target:
+                    targets.append(seq[uid])
+                    processed = []
+                    for (i, cand) in enumerate(candidates):
+                        if seq[uid].merge(cand, id_tolerance):
+                            processed.insert(0, i)
+                    for i in processed:
+                        del candidates[i]
+                else:
+                    output.write(str(seq[uid]) + "\n")
+            logger.info('Clusters merged: %d', merge_count)
+            logger.info('Small clusters remaining: %d', len(candidates))
+            for consensus in targets:
+                output.write(str(consensus) + "\n")
+            for consensus in candidates:
+                output.write(str(consensus) + "\n")
+        else:
+            for uid in seq:
+                output.write(str(seq[uid]) + "\n")

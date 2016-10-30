@@ -82,8 +82,6 @@ def main():
         logger.warning("Merging of small clusters is disabled.")
     logger.info('Consensus sequences will go to ' + args.output)
 
-    output_fun = utils.smart_open(args.output)
-
     ## start consensus computation
     started_at = time.time()
     seq = cons.from_fastq(args.fastq, args.id_length, args.adapter)
@@ -108,61 +106,10 @@ def main():
         logger.info('Time taken for consensus: %s',
                     str(datetime.timedelta(seconds=cons_time - started_at)))
 
-    with output_fun(args.output, 'w') as output:
-        if args.merge_size and args.merge_target:
-            logger.info('Merging small clusters')
-            candidates = []
-            targets = []
-            merge_count = 0
-            for (seq_count, uid) in enumerate(seq):
-                if logger.isEnabledFor(logging.DEBUG) and seq_count % 10000 == 0:
-                    logger.debug("clusters: %d, merged: %d, small: %d, targets: %d",
-                                 seq_count, merge_count, len(candidates), len(targets))
-                if seq[uid].size <= args.merge_size:
-                    merged = False
-                    for consensus in targets:
-                        merged = consensus.merge(seq[uid], args.id_tolerance)
-                        if merged:
-                            merge_count += 1
-                            break
-                    if not merged:
-                        ## attempt merging with other candidates
-                        remove = None
-                        for (i, cand) in enumerate(candidates):
-                            merged = seq[uid].merge(cand, args.id_tolerance)
-                            if merged:
-                                merge_count += 1
-                                remove = i
-                                break
-                        if merged:
-                            del candidates[remove]
-                            if seq[uid].size > args.merge_size:
-                                targets.append(seq[uid])
-                            else:
-                                candidates.append(seq[uid])
-                        else:
-                            candidates.append(seq[uid])
-                elif seq[uid].size <= args.merge_target:
-                    targets.append(seq[uid])
-                    processed = []
-                    for (i, cand) in enumerate(candidates):
-                        if seq[uid].merge(cand, args.id_tolerance):
-                            processed.insert(0, i)
-                    for i in processed:
-                        del candidates[i]
-                else:
-                    output.write(str(seq[uid]) + "\n")
-            logger.info('Clusters merged: %d', merge_count)
-            logger.info('Small clusters remaining: %d', len(candidates))
-            for consensus in targets:
-                output.write(str(consensus) + "\n")
-            for consensus in candidates:
-                output.write(str(consensus) + "\n")
-            logger.info('Time taken for merging: %s',
-                        str(datetime.timedelta(seconds=time.time() - cons_time)))
-        else:
-            for uid in seq:
-                output.write(str(seq[uid]) + "\n")
+    cons.to_fastq(seq, args.output, args.id_tolerance, args.merge_size, args.merge_target)
+    if args.merge_size and args.merge_target:
+        logger.info('Time taken for merging: %s',
+                    str(datetime.timedelta(seconds=time.time() - cons_time)))
     logger.info('Total time taken: %s', str(datetime.timedelta(seconds=time.time() - started_at)))
     mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
     logger.info('Memory used: %.2f MB', mem)
