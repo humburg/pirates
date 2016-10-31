@@ -299,6 +299,7 @@ def to_fastq(seq, output_file, id_tolerance, merge_size, merge_target):
                             processed.insert(0, i)
                     for i in processed:
                         del candidates[i]
+                        merge_count += 1
                 else:
                     output.write(str(seq[uid]) + "\n")
             logger.info('Clusters merged: %d', merge_count)
