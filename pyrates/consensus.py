@@ -66,7 +66,7 @@ class Consensus(object):
                 qual_update[i] = qual_other
         self.uid.quality = ''.join(qual_update)
 
-    def update(self, uid_other, seq_other, size_other=1, discard=True):
+    def update(self, uid_other, seq_other, size_other=1, diffs_other=None, discard=True):
         """Update consensus sequence.
 
         The read represented by `seq_other` is added to the consensus.
@@ -79,6 +79,8 @@ class Consensus(object):
                 added to the consensus.
             size_other (:obj:`int`, optional): Treat the sequence provided for
                 updating as a representative of this many sequences.
+            diffs_other (:obj:`dict`, optional): Differences already recorded
+                for other sequence.
             discard (:obj:`bool`, optional): If this is `True` sequences that
                 are rejected for consensus computations are counted and are
                 assumed to be excluded from further concideration. They are
@@ -134,6 +136,12 @@ class Consensus(object):
                                      zip(qual_update, [1]*len(qual_update), seq_update))))
         qual_update = [q[0] for q in max_qual]
         diff = [s != o for s, o in zip(seq_update, seq_other)]
+        if diffs_other is not None:
+            for i in diffs_other:
+                if i not in self.diffs:
+                    self.diffs[i][seq_update[i]] += self.size
+                for nuc in diffs_other[i]:
+                    self.diffs[i][nuc] += diffs_other[i][nuc]
         if any(diff):
             for (i, is_diff) in enumerate(diff):
                 # check if new sequence has different nucleotide at this position
@@ -171,7 +179,8 @@ class Consensus(object):
         """
         if self.uid.grosslydifferent(other.uid, len(self.uid), tolerance):
             return False
-        return self.update(other.uid, other.sequence, other.size, discard=False)
+        return self.update(other.uid, other.sequence, other.size, diffs_other=other.diffs,
+                           discard=False)
 
     def __str__(self):
         diff_str = ''
