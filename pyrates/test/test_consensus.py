@@ -253,31 +253,48 @@ def test_output_simple(tol, size, target):
            "%r != %r" % (seqs[1][3] == 'I'*(len(uid2) + len(uid1)) + qual2[0])
     os.remove(TMP + 'simple_out.fastq')
 
-@with_teardown(lambda: os.remove(TMP + 'merge_out.fastq'))
+#@with_teardown(lambda: os.remove(TMP + 'merge_out.fastq'))
 def test_output_merge():
     """Write output, allow merging of clusters."""
     uid1 = "ACCT"
     uid2 = "ACTT"
-    seq1 = ["ACTGTTTGTCTAAGC"]*3
+    uid3 = "GGGG"
+
+    seq1 = ["ACTGTTTGTCTAAGC"]*2
     qual1 = ['I'*len(seq1[0])]*len(seq1)
     seq2 = ["ACTGTTTTTCTAAGC"]*5
     qual2 = ['I'*len(seq2[0])]*len(seq2)
+    seq5 = ["ACTGTTTTTCTAAGC"]*2
+    qual5 = ['I'*len(seq5[0])]*len(seq5)
+
     seq3 = ["GGACGGGGCAATTTA"]
     qual3 = ['I'*len(seq3[0])]
-    consensus = create_consensus([uid1 + uid2]*len(seq1) + [uid1 + uid1] + [uid2 + uid1]*len(seq2),
-                                 ['I'*(len(uid1) + len(uid2))]*(len(seq1) + len(seq2) + len(seq3)),
-                                 seq1 + seq3 + seq2, qual1 + qual3 + qual2)
-    cons.to_fastq(consensus, TMP + 'merge_out.fastq', 2, 3, 5)
+
+    seq4 = ["ACTGTTTTTCTAAGC"]*10
+    qual4 = ['I'*len(seq4[0])]*len(seq4)
+
+    consensus = create_consensus([uid3 + uid3]*len(seq4) + [uid1 + uid2]*len(seq1) + \
+                                   [uid1 + uid1] + [uid2 + uid1]*len(seq2) + \
+                                   [uid2 + uid2]*len(seq5),
+                                 ['I'*(len(uid1) + len(uid2))]*(len(seq1) + len(seq2) + \
+                                   len(seq3) + len(seq4) + len(seq5)),
+                                 seq4 + seq1 + seq3 + seq2 + seq5,
+                                 qual4 + qual1 + qual3 + qual2 + qual5)
+    cons.to_fastq(consensus, TMP + 'merge_out.fastq', 2, 4, 7)
     with open(TMP + 'merge_out.fastq') as fastq:
         lines = fastq.readlines()
         lines = [line.rstrip() for line in lines]
 
-    expect1 = ['@8 7G3T5', uid2 + uid1 + seq2[0], '+', 'I'*(len(uid1) + len(uid2)) + qual1[0]]
+    expect1 = ['@9 7G2T7', uid2 + uid1 + seq2[0], '+', 'I'*(len(uid1) + len(uid2)) + qual1[0]]
     expect2 = ['@1', uid1 + uid1 + seq3[0], '+', 'I'*(2*len(uid1)) + qual3[0]]
-    assert len(lines) == 8, "%r != %r" % (len(lines), 8)
-    seqs = [lines[0:4], lines[4:8]]
-    seqs.sort(key=lambda x: x[0])
+    expect3 = ['@10', uid3 + uid3 + seq4[0], '+', 'I'*(len(uid3) + len(uid3)) + qual4[0]]
+    assert len(lines) == 12, "%r != %r" % (len(lines), 12)
+    seqs = [lines[0:4], lines[4:8], lines[8:12]]
+    seqs.sort(key=lambda x: int(x[0][1:].split()[0]))
     for obs, exp in zip(seqs[1], expect1):
         assert obs == exp, "%r != %r" % (obs, exp)
     for obs, exp in zip(seqs[0], expect2):
         assert obs == exp, "%r != %r" % (obs, exp)
+    for obs, exp in zip(seqs[2], expect3):
+        assert obs == exp, "%r != %r" % (obs, exp)
+    
