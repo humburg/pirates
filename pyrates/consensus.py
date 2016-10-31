@@ -136,7 +136,9 @@ class Consensus(object):
                                      zip(qual_update, [1]*len(qual_update), seq_update))))
         qual_update = [q[0] for q in max_qual]
         diff = [s != o for s, o in zip(seq_update, seq_other)]
-        if diffs_other is not None:
+        if diffs_other is None:
+            diffs_other = {}
+        if diffs_other:
             for i in diffs_other:
                 if i not in self.diffs:
                     self.diffs[i][seq_update[i]] += self.size
@@ -146,17 +148,21 @@ class Consensus(object):
             for (i, is_diff) in enumerate(diff):
                 # check if new sequence has different nucleotide at this position
                 if is_diff:
-                    nuc = seq_update[i]
-                    nuc_other = seq_other[i]
-                    # update diff to record reading discrepancy at this position
-                    if self.diffs[i][nuc] == 0:
-                        # update for count seen so far
-                        self.diffs[i][nuc] = self.size
-                    self.diffs[i][nuc_other] += size_other
+                    if i not in diffs_other:
+                        nuc = seq_update[i]
+                        nuc_other = seq_other[i]
+                        # update diff to record reading discrepancy at this position
+                        if self.diffs[i][nuc] == 0:
+                            # update for count seen so far
+                            self.diffs[i][nuc] = self.size
+                        self.diffs[i][nuc_other] += size_other
                 elif i in self.diffs:
                     self.diffs[i][seq_update[i]] += size_other
             seq_update = [q[2] for q in max_qual]
             self.sequence.sequence = ''.join(seq_update)
+        elif self.diffs and not diffs_other:
+            for i in self.diffs:
+                self.diffs[i][seq_update[i]] += size_other
         self.size += size_other
 
         # regardless of sequence values we will remember the highest quality value
