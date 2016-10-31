@@ -2,6 +2,8 @@
 
 import os
 import os.path
+import pyrates.sequence as sequence
+import pyrates.consensus as cons
 from pyrates.test import TMP
 
 def create_fastq(seq, qual, file_name, name=None):
@@ -67,3 +69,23 @@ def setup_fastq_mismatch():
 def teardown_fastq_mismatch():
     """Remove files created for simple fastq test"""
     os.remove(TMP + 'mismatch.fastq')
+
+def create_consensus(uids, uid_qual, seqs, seq_qual):
+    """Create consensus dictionary from raw sequences.import
+
+    Args:
+        uids (:obj:`list`): UID sequences.
+        seqs (:obj:`list`): Read sequences.
+
+    Returns:
+        :obj:`dict`: Consensus sequences.
+    """
+    uid_with_qual = [sequence.SequenceWithQuality(seq, qual) for seq, qual in zip(uids, uid_qual)]
+    seq_with_qual = [sequence.SequenceWithQuality(seq, qual) for seq, qual in zip(seqs, seq_qual)]
+    cluster = {}
+    for uid, seq in zip(uid_with_qual, seq_with_qual):
+        if uid.sequence not in cluster:
+            cluster[uid.sequence] = cons.Consensus(uid, seq)
+        else:
+            cluster[uid.sequence].update(uid, seq)
+    return cluster

@@ -1,15 +1,18 @@
 """
 Test consensus module.
 """
+import os
+
 from nose2.tools import params
 from nose2.tools.decorators import with_setup, with_teardown
+
 import pyrates.consensus as cons
 import pyrates.sequence as sequence
 from pyrates.test import TMP
-from pyrates.test.fixtures import setup_fastq_simple, \
-                                  teardown_fastq_simple, \
-                                  setup_fastq_mismatch, \
-                                  teardown_fastq_mismatch
+from pyrates.test.fixtures import (setup_fastq_mismatch, setup_fastq_simple,
+                                   teardown_fastq_mismatch, teardown_fastq_simple,
+                                   create_consensus)
+
 
 def test_consensus_new():
     """Create objects of class Consensus"""
@@ -217,3 +220,64 @@ def test_fastq_mismatch():
            "%r != %r" % (cluster[uid2_expect].sequence.sequence, seq2_expect)
     assert cluster[uid3_expect].sequence.sequence == seq3_expect, \
            "%r != %r" % (cluster[uid3_expect].sequence.sequence, seq3_expect)
+
+@with_teardown(lambda: os.remove(TMP + 'simple_out.fastq'))
+@params((0, 0, 0), (1, 3, 5))
+def test_output_simple(tol, size, target):
+    """Write output without merging of clusters"""
+    uid1 = "ACCT"
+    uid2 = "ACTT"
+    seq1 = ["ACTGTTTGTCTAAGC"]*3
+    qual1 = ['I'*len(seq1[0])]*len(seq1)
+    seq2 = ["ACTGTTTTTCTAAGC"]*5
+    qual2 = ['I'*len(seq2[0])]*len(seq2)
+    consensus = create_consensus([uid1 + uid2]*len(seq1) + [uid2 + uid1]*len(seq2),
+                                 ['I'*(len(uid1) + len(uid2))]*(len(seq1) + len(seq2)),
+                                 seq1 + seq2, qual1 + qual2)
+    cons.to_fastq(consensus, TMP + 'simple_out.fastq', tol, size, target)
+    with open(TMP + 'simple_out.fastq') as fastq:
+        lines = fastq.readlines()
+        lines = [line.rstrip() for line in lines]
+
+    assert len(lines) == 8
+    seqs = [lines[0:4], lines[4:8]]
+    seqs.sort(key=lambda x: x[0])
+    assert seqs[0][0] == '@3', "%r != %r" % (seqs[0][0], '@3')
+    assert seqs[0][1] == uid1 + uid2 + seq1[0], "%r != %r" % (seqs[0][1], uid1 + uid2 + seq1[0])
+    assert seqs[0][2] == '+'
+    assert seqs[0][3] == 'I'*(len(uid1) + len(uid2)) + qual1[0], \
+           "%r != %r" % (seqs[0][3] == 'I'*(len(uid1) + len(uid2)) + qual1[0])
+    assert seqs[1][0] == '@5', "%r != %r" % (seqs[1][0], '@5')
+    assert seqs[1][1] == uid2 + uid1 + seq2[0], "%r != %r" % (seqs[1][1], uid2 + uid1 + seq2[0])
+    assert seqs[1][2] == '+'
+    assert seqs[1][3] == 'I'*(len(uid1) + len(uid2)) + qual2[0], \
+           "%r != %r" % (seqs[1][3] == 'I'*(len(uid2) + len(uid1)) + qual2[0])
+
+@with_teardown(lambda: os.remove(TMP + 'merge_out.fastq'))
+def test_output_merge():
+    """Write output, allow merging of clusters."""
+    uid1 = "ACCT"
+    uid2 = "ACTT"
+    seq1 = ["ACTGTTTGTCTAAGC"]*3
+    qual1 = ['I'*len(seq1[0])]*len(seq1)
+    seq2 = ["ACTGTTTTTCTAAGC"]*5
+    qual2 = ['I'*len(seq2[0])]*len(seq2)
+    seq3 = ["GGACGGGGCAATTTA"]
+    qual3 = ['I'*len(seq3[0])]
+    consensus = create_consensus([uid1 + uid2]*len(seq1) + [uid1 + uid1] + [uid2 + uid1]*len(seq2),
+                                 ['I'*(len(uid1) + len(uid2))]*(len(seq1) + len(seq2) + len(seq3)),
+                                 seq1 + seq3 + seq2, qual1 + qual3 + qual2)
+    cons.to_fastq(consensus, TMP + 'merge_out.fastq', 2, 3, 5)
+    with open(TMP + 'merge_out.fastq') as fastq:
+        lines = fastq.readlines()
+        lines = [line.rstrip() for line in lines]
+
+    expect1 = ['@8 7G3T5', uid2 + uid1 + seq2[0], '+', 'I'*(len(uid1) + len(uid2)) + qual1[0]]
+    expect2 = ['@1', uid1 + uid1 + seq3[0], '+', 'I'*(2*len(uid1)) + qual3[0]]
+    assert len(lines) == 8, "%r != %r" % (len(lines), 8)
+    seqs = [lines[0:4], lines[4:8]]
+    seqs.sort(key=lambda x: x[0])
+    for obs, exp in zip(seqs[1], expect1):
+        assert obs == exp, "%r != %r" % (obs, exp)
+    for obs, exp in zip(seqs[0], expect2):
+        assert obs == exp, "%r != %r" % (obs, exp)
