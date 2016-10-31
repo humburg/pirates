@@ -4,6 +4,7 @@ import os
 import os.path
 import pyrates.sequence as sequence
 import pyrates.consensus as cons
+import pyrates.clustering as clust
 from pyrates.test import TMP
 
 def create_fastq(seq, qual, file_name, name=None):
@@ -86,4 +87,4 @@ def create_consensus(uids, uid_qual, seqs, seq_qual):
             cluster[uid.sequence] = cons.Consensus(uid, seq)
         else:
             cluster[uid.sequence].update(uid, seq)
-    return cluster
+    return clust.Clustering(cluster)

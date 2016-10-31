@@ -7,7 +7,7 @@ import resource
 import time
 import logging
 
-import pyrates.consensus as cons
+import pyrates.clustering as clust
 import pyrates.utils as utils
 from . import __version__
 from ._version import get_versions
@@ -84,7 +84,7 @@ def main():
 
     ## start consensus computation
     started_at = time.time()
-    seq = cons.from_fastq(args.fastq, args.id_length, args.adapter)
+    seq = clust.Clustering.from_fastq(args.fastq, args.id_length, args.adapter)
 
     if logger.isEnabledFor(logging.INFO):
         total_different = 0
@@ -106,7 +106,7 @@ def main():
         logger.info('Time taken for consensus: %s',
                     str(datetime.timedelta(seconds=cons_time - started_at)))
 
-    cons.to_fastq(seq, args.output, args.id_tolerance, args.merge_size, args.merge_target)
+    seq.write(args.output, args.id_tolerance, args.merge_size, args.merge_target)
     if args.merge_size and args.merge_target:
         logger.info('Time taken for merging: %s',
                     str(datetime.timedelta(seconds=time.time() - cons_time)))
