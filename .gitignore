@@ -5,3 +5,4 @@ dist/*
 *.pyc
 docker/requirements.txt
 .coverage
+tmp/*
