@@ -182,6 +182,43 @@ def test_merge_size():
     assert merged, "Merging failed unexpectedly"
     assert cons1.size == 4, "Incorrect size for merged cluster (%d != %d)" % (cons1.size, 4)
 
+@params(([0, 1, 2, 3]), ([1, 0, 2, 3]), ([1, 2, 0, 3]), ([2, 1, 0, 3]), ([2, 0, 1, 3]),
+        ([0, 1, 3, 2]), ([1, 0, 3, 2]), ([1, 2, 3, 0]), ([2, 1, 3, 0]), ([2, 0, 3, 1]),
+        ([0, 3, 1, 2]), ([1, 3, 0, 2]), ([1, 3, 2, 0]), ([2, 3, 1, 0]), ([2, 3, 0, 1]),
+        ([3, 0, 1, 2]), ([3, 1, 0, 2]), ([3, 1, 2, 0]), ([3, 2, 1, 0]), ([3, 2, 0, 1]))
+def test_merge_diff(idx):
+    """Propagate diffs when merging clusters"""
+    uid1 = "ACCT"
+    uid2 = "ACTT"
+
+    seq1 = ["ACTGTTTGTCTAAGC"]*2
+    qual1 = ['I'*len(seq1[0])]*len(seq1)
+    seq2 = ["ACTGTTTTTCTAAGC"]*5
+    qual2 = ['I'*len(seq2[0])]*len(seq2)
+    seq3 = ["ACTGTTTTTCTAAGC"]*2
+    qual3 = ['I'*len(seq3[0])]*len(seq3)
+    seq4 = ["ACTGTTTGTGTAAGC", "ACTGTTTGTGTAAGC", "ACTGTTTGTATAAGC"]
+    qual4 = ['I'*len(seq4[0])]*len(seq4)
+
+    consensus = create_consensus([uid1 + uid2]*len(seq1) + \
+                                   [uid2 + uid1]*len(seq2) + \
+                                   [uid2 + uid2]*len(seq3) + \
+                                   [uid1 + uid1]*len(seq4),
+                                 ['I'*(len(uid1)*2)]*(len(seq1) + len(seq2) + \
+                                   len(seq3) + len(seq4)),
+                                 seq1 + seq2 + seq3 + seq4,
+                                 qual1 + qual2 + qual3 + qual4)
+    ids = [uid1+ uid2, uid2 + uid1, uid2 + uid2, uid1 + uid1]
+    clusters = [consensus[ids[i]] for i in idx]
+    merged = clusters[0]
+    for i in range(1, len(clusters)):
+        success = merged.merge(clusters[i], 2)
+        assert success
+    expect = "@12 7G5T7 9A1C9G2"
+    obs = str(merged).splitlines()
+    assert merged.size == 12, "%r != %r" % (merged.size, 12)
+    assert obs[0] == expect, "%r != %r" % (obs[0], expect)
+
 @with_setup(setup_fastq_simple)
 @with_teardown(teardown_fastq_simple)
 def test_fastq_simple():
@@ -253,7 +290,7 @@ def test_output_simple(tol, size, target):
            "%r != %r" % (seqs[1][3] == 'I'*(len(uid2) + len(uid1)) + qual2[0])
     os.remove(TMP + 'simple_out.fastq')
 
-#@with_teardown(lambda: os.remove(TMP + 'merge_out.fastq'))
+@with_teardown(lambda: os.remove(TMP + 'merge_out.fastq'))
 def test_output_merge():
     """Write output, allow merging of clusters."""
     uid1 = "ACCT"
@@ -297,4 +334,3 @@ def test_output_merge():
         assert obs == exp, "%r != %r" % (obs, exp)
     for obs, exp in zip(seqs[2], expect3):
         assert obs == exp, "%r != %r" % (obs, exp)
-    
