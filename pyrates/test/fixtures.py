@@ -20,8 +20,6 @@ def create_fastq(seq, qual, file_name, name=None):
     file_name = TMP + file_name
     if os.path.isfile(file_name):
         return
-    if not os.path.isdir(TMP):
-        os.makedirs(TMP)
 
     if name is None:
         name = ['test_%d' % i for i in range(len(seq))]

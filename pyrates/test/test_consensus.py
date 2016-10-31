@@ -221,7 +221,6 @@ def test_fastq_mismatch():
     assert cluster[uid3_expect].sequence.sequence == seq3_expect, \
            "%r != %r" % (cluster[uid3_expect].sequence.sequence, seq3_expect)
 
-@with_teardown(lambda: os.remove(TMP + 'simple_out.fastq'))
 @params((0, 0, 0), (1, 3, 5))
 def test_output_simple(tol, size, target):
     """Write output without merging of clusters"""
@@ -252,6 +251,7 @@ def test_output_simple(tol, size, target):
     assert seqs[1][2] == '+'
     assert seqs[1][3] == 'I'*(len(uid1) + len(uid2)) + qual2[0], \
            "%r != %r" % (seqs[1][3] == 'I'*(len(uid2) + len(uid1)) + qual2[0])
+    os.remove(TMP + 'simple_out.fastq')
 
 @with_teardown(lambda: os.remove(TMP + 'merge_out.fastq'))
 def test_output_merge():
