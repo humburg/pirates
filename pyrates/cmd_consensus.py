@@ -105,11 +105,11 @@ def main():
         cons_time = time.time()
         logger.info('Time taken for consensus: %s',
                     str(datetime.timedelta(seconds=cons_time - started_at)))
-
-    seq.write(args.output, args.id_tolerance, args.merge_size, args.merge_target)
+    seq.merge(args.id_tolerance, args.merge_size)
     if args.merge_size and args.merge_target:
         logger.info('Time taken for merging: %s',
                     str(datetime.timedelta(seconds=time.time() - cons_time)))
+    seq.write(args.output)
     logger.info('Total time taken: %s', str(datetime.timedelta(seconds=time.time() - started_at)))
     mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
     logger.info('Memory used: %.2f MB', mem)

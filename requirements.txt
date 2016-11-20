@@ -1,4 +1,5 @@
 argparse
 cov-core == 1.15.0
+ngram >= 3.3.0
 nose2 >= 0.3
 versioneer == 0.17
