@@ -13,6 +13,8 @@ class Clustering(object):
     Args:
         centres (:obj:`dict`): Cluster centres represented by consensus
             sequences and identified by the associated UID.
+        ngrams (:obj:`ngram.NGram`, optional): Precomputed set of ngrams. If this
+            is missing it will be computed from the cluster centres.
 
     Attributes:
         clusters (:obj:`dict`): Cluster centres represented by consensus
@@ -21,35 +23,43 @@ class Clustering(object):
     __slots__ = 'clusters', '_store'
     _logger = utils.get_logger(__name__)
 
-    def __init__(self, centres):
+    def __init__(self, centres, ngrams=None):
         self.clusters = centres
-        self._store = ngram.NGram(centres.keys(), N=3)
+        if ngrams is not None:
+            self._store = ngrams
+        else:
+            self._store = ngram.NGram(centres.keys(), N=3)
 
     @classmethod
-    def from_fastq(cls, input_file, id_length, adapter):
+    def from_fastq(cls, input_file, id_length, adapter, threshold=0.4):
         """Read FASTQ file to generate consensus sequences.
 
         Args:
             input_file (:obj:`str`): Name of input file.
             id_length (:obj:`int`): Length of UID sequence at beginning/end of read.
             adapter (:obj:`str`): Adapter sequence.
-
+            threshold (:obj:`float`): Similarity threshold for UIDs (proportion of
+                                      identical ngrams).
         Returns:
             :obj:`dict`: Computed consensus sequences.
         """
         line_count = 0
         total_skipped = 0
+        total_merged = 0
         seq = {}
         id_length = id_length
         adapt_length = id_length + len(adapter)
+
+        id_set = ngram.NGram(N=3)
+        id_map = {}
 
         open_fun = utils.smart_open(input_file)
         with open_fun(input_file) as fastq:
             for line in fastq:
                 # print out some stats as we go
                 if cls._logger.isEnabledFor(logging.DEBUG) and (line_count % 100000) == 0:
-                    cls._logger.debug("reads: %d clusters: %d skipped: %d",
-                                      line_count/4, len(seq), total_skipped)
+                    cls._logger.debug("reads: %d clusters: %d merged: %d skipped: %d",
+                                      line_count/4, len(seq), total_merged, total_skipped)
                 elif (line_count % 4) == 1:
                     line = line.rstrip("\n")
                     nameid = line[0:id_length] + line[-id_length:]
@@ -61,14 +71,24 @@ class Clustering(object):
 
                     uid = pseq.SequenceWithQuality(nameid, qnameid)
                     read_seq = pseq.SequenceWithQuality(sequence, qsequence)
+                    if nameid in id_map:
+                        nameid = id_map[nameid]
+                        total_merged += 1
                     if nameid not in seq:
-                        seq[nameid] = cons.Consensus(uid, read_seq)
-                    else:
-                        success = seq[nameid].update(uid, read_seq)
-                        if not success:
-                            total_skipped += 1
+                        similar_id = id_set.find(nameid, threshold)
+                        if similar_id is None:
+                            seq[nameid] = cons.Consensus(uid, read_seq)
+                            id_set.add(nameid)
+                            continue
+                        else:
+                            id_map[nameid] = similar_id
+                            nameid = similar_id
+                            total_merged += 1
+                    success = seq[nameid].update(uid, read_seq)
+                    if not success:
+                        total_skipped += 1
                 line_count += 1
-        return cls(seq)
+        return cls(seq, id_set)
 
     def find(self, uid, tolerance=3):
         """Find best approximate match for UIDs.
