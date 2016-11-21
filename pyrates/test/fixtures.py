@@ -70,7 +70,7 @@ def teardown_fastq_mismatch():
     os.remove(TMP + 'mismatch.fastq')
 
 def create_consensus(uids, uid_qual, seqs, seq_qual):
-    """Create consensus dictionary from raw sequences.import
+    """Create consensus dictionary from raw sequences.
 
     Args:
         uids (:obj:`list`): UID sequences.
