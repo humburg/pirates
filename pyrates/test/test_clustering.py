@@ -87,8 +87,8 @@ def test_fastq_mismatch():
     assert cluster[uid3_expect].sequence.sequence == seq3_expect, \
            "%r != %r" % (cluster[uid3_expect].sequence.sequence, seq3_expect)
 
-@params((0, 0, 0), (1, 3, 5))
-def test_output_simple(tol, size, target):
+@params((0, 0), (1, 3))
+def test_output_simple(tol, size):
     """Write output without merging of clusters"""
     uid1 = "ACCT"
     uid2 = "ACTT"
@@ -99,7 +99,8 @@ def test_output_simple(tol, size, target):
     clustering = create_consensus([uid1 + uid2]*len(seq1) + [uid2 + uid1]*len(seq2),
                                   ['I'*(len(uid1) + len(uid2))]*(len(seq1) + len(seq2)),
                                   seq1 + seq2, qual1 + qual2)
-    clustering.write(TMP + 'simple_out.fastq', tol, size, target)
+    clustering.merge(tol, size)
+    clustering.write(TMP + 'simple_out.fastq')
     with open(TMP + 'simple_out.fastq') as fastq:
         lines = fastq.readlines()
         lines = [line.rstrip() for line in lines]
@@ -146,7 +147,8 @@ def test_output_merge():
                                    len(seq3) + len(seq4) + len(seq5)),
                                   seq4 + seq1 + seq3 + seq2 + seq5,
                                   qual4 + qual1 + qual3 + qual2 + qual5)
-    clustering.write(TMP + 'merge_out.fastq', 2, 4, 7)
+    clustering.merge(2, 4, 7)
+    clustering.write(TMP + 'merge_out.fastq')
     with open(TMP + 'merge_out.fastq') as fastq:
         lines = fastq.readlines()
         lines = [line.rstrip() for line in lines]
