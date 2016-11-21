@@ -104,16 +104,16 @@ class Clustering(object):
         Returns:
             :obj:`list`: All identified matches.
         """
-        ngram_count = len(uid) - 2
+        ngram_count = len(uid)
         threshold = (ngram_count - 3*tolerance)/float(ngram_count)
         hits = self._store.search(uid, threshold)
         if hits:
             hits = hits[1:]
-        if len(hits) > max_hits:
+        if max_hits and len(hits) > max_hits:
             hits = hits[:max_hits]
         return hits
 
-    def merge(self, id_tolerance, merge_size):
+    def merge(self, id_tolerance, merge_size, target_size=None):
         """Merge small clusters into larger ones.
 
         For each cluster not larger than `merge_size` an attempt is made to
@@ -127,6 +127,8 @@ class Clustering(object):
                 for merging of clusters.
             merge_size (:obj:`int`): Maximum size for *small* clusters that will be considered
                 for merging.
+            target_size (:obj:`int`): Maximum size for *larger* clusters that will be considered
+                for merging.
         """
         remove = set()
         merge_count = 0
@@ -134,17 +136,22 @@ class Clustering(object):
         for (i, uid) in enumerate(self.clusters, start=1):
             cur_cluster = self.clusters[uid]
             if cur_cluster.size <= merge_size:
-                candidate = self.search(uid, 1, id_tolerance)
-                candidate = [c[0] for c in candidate if c not in remove]
+                merged = False
+                candidate = [c[0] for c in self.search(uid, None, id_tolerance)]
+                candidate = [c for c in candidate if c not in remove]
                 if candidate:
                     candidate = candidate[0]
                     cand_cluster = self[candidate]
-                    success = cand_cluster.merge(self[uid], id_tolerance)
-                    if success and candidate:
-                        remove.add(uid)
-                        merge_count += 1
-                    else:
-                        small_count += 1
+                    if target_size is None or cand_cluster.size <= target_size:
+                        success = cand_cluster.merge(self[uid], id_tolerance)
+                        if success and candidate:
+                            remove.add(uid)
+                            merged = True
+                if merged:
+                    merge_count += 1
+                else:
+                    small_count += 1
+
             if self._logger.isEnabledFor(logging.DEBUG) and i % 10000 == 0:
                 self._logger.debug("clusters: %d, small: %d, merged: %d",
                                    i, small_count + merge_count, merge_count)
