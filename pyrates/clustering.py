@@ -56,7 +56,7 @@ class Clustering(object):
         with open_fun(input_file) as fastq:
             for (line_count, line) in enumerate(fastq):
                 # print out some stats as we go
-                if cls._logger.isEnabledFor(logging.DEBUG) and (line_count % 100000) == 0:
+                if cls._logger.isEnabledFor(logging.DEBUG) and (line_count % 1000) == 0:
                     cls._logger.debug("reads: %d clusters: %d merged: %d skipped: %d",
                                       line_count/4, len(seq), total_merged, total_skipped)
                 elif (line_count % 4) == 1:
@@ -73,9 +73,13 @@ class Clustering(object):
                     if nameid in id_map:
                         nameid = id_map[nameid]
                         total_merged += 1
-                    if nameid not in seq:
+                    elif nameid not in seq:
+                        ## Look for similar IDs that may be candidates for merging
                         similar_id = id_set.find(nameid, threshold)
-                        if similar_id is None:
+                        ## Check that there are no obvious differences between sequences
+                        if similar_id is None or \
+                          len(seq[similar_id].sequence) != len(read_seq) or \
+                          seq[similar_id].sequence.grosslydifferent(read_seq):
                             seq[nameid] = cons.Consensus(uid, read_seq)
                             id_set.add(nameid)
                             continue
