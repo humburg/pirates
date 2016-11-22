@@ -96,17 +96,12 @@ class Consensus(object):
                                self.uid.sequence, uid_other.sequence)
             return False
 
-        # if grossly different then just count this and move on
-        if self.sequence.grosslydifferent(seq_other):
-            if discard:
-                self.different += size_other
-            return False
-
         # if sequence length is shorter, count this occurance, abandon this
         # sequence and move on
         if len(self.sequence) > len(seq_other):
             if discard:
                 self.shorter += size_other
+            self._logger.debug("Mismatch in sequence length")
             return False
 
         # if new sequence is longer, count this occurance
@@ -117,7 +112,16 @@ class Consensus(object):
                     self.sequence = seq_other
                     self.shorter += size_other
                 else: self.longer += size_other
+            self._logger.debug("Mismatch in sequence length")
             return False
+
+        # if grossly different then just count this and move on
+        if self.sequence.grosslydifferent(seq_other):
+            if discard:
+                self.different += size_other
+            self._logger.debug("Sequences are too different")
+            return False
+
 
         self._update_uid(uid_other)
 
