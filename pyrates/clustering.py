@@ -43,7 +43,6 @@ class Clustering(object):
         Returns:
             :obj:`dict`: Computed consensus sequences.
         """
-        line_count = 0
         total_skipped = 0
         total_merged = 0
         seq = {}
@@ -55,7 +54,7 @@ class Clustering(object):
 
         open_fun = utils.smart_open(input_file)
         with open_fun(input_file) as fastq:
-            for line in fastq:
+            for (line_count, line) in enumerate(fastq):
                 # print out some stats as we go
                 if cls._logger.isEnabledFor(logging.DEBUG) and (line_count % 100000) == 0:
                     cls._logger.debug("reads: %d clusters: %d merged: %d skipped: %d",
@@ -87,7 +86,6 @@ class Clustering(object):
                     success = seq[nameid].update(uid, read_seq)
                     if not success:
                         total_skipped += 1
-                line_count += 1
         return cls(seq, id_set)
 
     def find(self, uid, tolerance=3):
