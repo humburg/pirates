@@ -84,3 +84,106 @@ class SequenceWithQuality(object):
 
     def __getitem__(self, key):
         return (self._sequence[key], self._quality[key])
+
+class SequenceStore(object):
+    """Store a collection of sequences.
+
+    This behaves like a set in the sense that each unique sequence is only represented
+    once. Supports fast lookup of approximate matches.
+
+    Args:
+        max_length (:obj:`int`): Maximum sequence length supported by this store.
+        alphabet (:obj:`tuple`): A list of all valid sequence characters.
+        wildcard (:obj:`string`): A character that should be treated as a wildcard,
+            i.e. match all letters in the alphabet.
+    """
+    __slots__ = '_alphabet', '_composition', '_index', '_wild'
+
+    def __init__(self, max_length, alphabet=('A', 'C', 'G', 'T'), wildcard='N'):
+        self._index = {}
+        self._alphabet = alphabet
+        self._wild = wildcard
+        self._composition = {letter:[set()]*(max_length+1) for letter in alphabet}
+
+    def add(self, sequence):
+        """Add a sequence to the store.
+
+        Args:
+            sequence (:obj:`string`): New sequence to be added.
+        """
+        if sequence not in self._index:
+            wilds = sequence.count(self._wild)
+            self._index[sequence] = {}
+            for letter in self._alphabet:
+                letter_count = sequence.count(letter)
+                letter_index = (letter_count, letter_count + wilds + 1)
+                self._index[sequence][letter] = letter_index
+                for i in range(*letter_index):
+                    self._composition[letter][i].add(sequence)
+
+    def remove(self, item):
+        """Remove a sequence from the sequence store.
+
+        Args:
+            item (:obj:`string`): Sequence to be removed.
+
+        Raises:
+            KeyError: if the sequence doesn't exist in the store.
+        """
+        for letter in self._alphabet:
+            for i in range(*self._index[item][letter]):
+                self._composition[letter][i].remove(item)
+        del self._index[item]
+
+    def discard(self, item):
+        """Remove a sequence from the store if it exists.
+
+        Args:
+            item (:obj:`string`): Sequence to be removed.
+        """
+        if item in self._index:
+            self.remove(item)
+
+    def find(self, sequence, max_diff):
+        """Find best match for sequence in the store.
+
+        Args:
+            sequence (:obj:`string`): Sequence to search for.
+            max_diff (:obj:`int`): Maximum number of mismatches allowed for a match.
+
+        Returns:
+            :obj:`tuple`: A tuple consisting of the best match found in the store and
+            the number of differences between the returned match and the search string.
+            If no suitable match was found `None` is returned instead.
+        """
+        if sequence in self._index:
+            return (sequence, 0)
+        wilds = sequence.count(self._wild)
+        candidates = set()
+        for letter in self._alphabet:
+            letter_count = sequence.count(letter)
+            candidates.update(*self._composition[letter][letter_count:(letter_count + wilds + 1)])
+        match = None
+        difference = max_diff + 1
+        for cand in candidates:
+            diff = self._diff(sequence, cand)
+            if diff < difference:
+                match = cand
+                difference = diff
+        if match is None:
+            return match
+        return (match, difference)
+
+    @staticmethod
+    def _diff(seq1, seq2):
+        diff = 0
+        for (i, letter) in enumerate(seq1):
+            if letter != seq2[i]:
+                diff += 1
+        return diff
+
+    def __len__(self):
+        return len(self._index)
+
+    def __contains__(self, item):
+        return item in self._index
