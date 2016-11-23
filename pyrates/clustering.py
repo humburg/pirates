@@ -2,7 +2,6 @@
 """
 
 import logging
-import ngram
 import pyrates.utils as utils
 import pyrates.sequence as pseq
 import pyrates.consensus as cons
@@ -13,8 +12,8 @@ class Clustering(object):
     Args:
         centres (:obj:`dict`): Cluster centres represented by consensus
             sequences and identified by the associated UID.
-        ngrams (:obj:`ngram.NGram`, optional): Precomputed set of ngrams. If this
-            is missing it will be computed from the cluster centres.
+        store (:obj:`pyrates.sequence.SequenceStore`, optional): Precomputed set of UID sequences.
+            If this is missing it will be computed from the cluster centres.
 
     Attributes:
         clusters (:obj:`dict`): Cluster centres represented by consensus
@@ -23,23 +22,22 @@ class Clustering(object):
     __slots__ = 'clusters', '_store'
     _logger = utils.get_logger(__name__)
 
-    def __init__(self, centres, ngrams=None):
+    def __init__(self, centres, store=None):
         self.clusters = centres
-        if ngrams is not None:
-            self._store = ngrams
+        if store is not None:
+            self._store = store
         else:
-            self._store = ngram.NGram(centres.keys(), N=3)
+            self._store = pseq.SequenceStore.from_list(list(centres.keys()))
 
     @classmethod
-    def from_fastq(cls, input_file, id_length, adapter, threshold=0.4):
+    def from_fastq(cls, input_file, id_length, adapter, threshold=5):
         """Read FASTQ file to generate consensus sequences.
 
         Args:
             input_file (:obj:`str`): Name of input file.
             id_length (:obj:`int`): Length of UID sequence at beginning/end of read.
             adapter (:obj:`str`): Adapter sequence.
-            threshold (:obj:`float`): Similarity threshold for UIDs (proportion of
-                                      identical ngrams).
+            threshold (:obj:`int`): Maximum number of differences allowed between UIDs.
         Returns:
             :obj:`dict`: Computed consensus sequences.
         """
@@ -49,14 +47,14 @@ class Clustering(object):
         id_length = id_length
         adapt_length = id_length + len(adapter)
 
-        id_set = ngram.NGram(N=3)
+        id_set = pseq.SequenceStore(id_length)
         id_map = {}
 
         open_fun = utils.smart_open(input_file)
         with open_fun(input_file) as fastq:
             for (line_count, line) in enumerate(fastq):
                 # print out some stats as we go
-                if cls._logger.isEnabledFor(logging.DEBUG) and (line_count % 1000) == 0:
+                if cls._logger.isEnabledFor(logging.DEBUG) and (line_count % 4) == 0:
                     cls._logger.debug("reads: %d clusters: %d merged: %d skipped: %d",
                                       line_count/4, len(seq), total_merged, total_skipped)
                 elif (line_count % 4) == 1:
@@ -75,11 +73,22 @@ class Clustering(object):
                         total_merged += 1
                     elif nameid not in seq:
                         ## Look for similar IDs that may be candidates for merging
-                        similar_id = id_set.find(nameid, threshold)
+                        id_cands = id_set.search(nameid, raw=True)
+                        id_cands = [cand for cand in id_cands if
+                                    len(seq[cand].sequence) == len(read_seq)]
+                        id_cands = [cand for cand in id_cands if
+                                    not seq[cand].sequence.grosslydifferent(read_seq)]
+                        id_cands = [(cand, id_set.diff(cand, nameid)) for cand in id_cands]
+                        if id_cands:
+                            similar_id = min(id_cands, key=lambda x: x[1])
+                            if similar_id[1] > threshold:
+                                similar_id = None
+                            else:
+                                similar_id = similar_id[0]
+                        else:
+                            similar_id = None
                         ## Check that there are no obvious differences between sequences
-                        if similar_id is None or \
-                          len(seq[similar_id].sequence) != len(read_seq) or \
-                          seq[similar_id].sequence.grosslydifferent(read_seq):
+                        if similar_id is None:
                             seq[nameid] = cons.Consensus(uid, read_seq)
                             id_set.add(nameid)
                             continue
@@ -97,7 +106,6 @@ class Clustering(object):
 
         Args:
             uid (:obj:`str`): UID for which the best match should be returned.
-                threshold (:obj:`float`): Minimum similarity required for match.
             tolerance (:obj:`int`): Number of mismatcheds that should be tolerated.
 
         Returns:
@@ -110,79 +118,7 @@ class Clustering(object):
             else:
                 return None
         else:
-            ngram_count = len(uid) - 2
-            threshold = (ngram_count - 3*tolerance)/float(ngram_count)
-            return self._store.find(uid, threshold)
-
-    def search(self, uid, max_hits=1, tolerance=3):
-        """Find all approximate matches.
-
-        Args:
-            uid (:obj:`str`): UID for which the best match should be returned.
-            threshold (:obj:`float`): Minimum similarity required for match.
-            tolerance (:obj:`int`): Number of mismatcheds that should be tolerated.
-            max_hits (:obj:`int`): Maximum number of hits to return.
-
-        Returns:
-            :obj:`list`: All identified matches.
-        """
-        ngram_count = len(uid)
-        threshold = (ngram_count - 3*tolerance)/float(ngram_count)
-        hits = self._store.search(uid, threshold)
-        if hits:
-            hits = hits[1:]
-        if max_hits and len(hits) > max_hits:
-            hits = hits[:max_hits]
-        return hits
-
-    def merge(self, id_tolerance, merge_size, target_size=None):
-        """Merge small clusters into larger ones.
-
-        For each cluster not larger than `merge_size` an attempt is made to
-        identify a larger cluster with similar UID and sequence. If UIDs
-        are sufficiently similar the merging may still fail if the actual
-        sequences are too different (using the same logic employed when computing
-        the initial consensus).
-
-        Args:
-            id_tolerance (:obj:`int`): Maximum number of mismatches between UIDs allowed
-                for merging of clusters.
-            merge_size (:obj:`int`): Maximum size for *small* clusters that will be considered
-                for merging.
-            target_size (:obj:`int`): Maximum size for *larger* clusters that will be considered
-                for merging.
-        """
-        remove = set()
-        merge_count = 0
-        small_count = 0
-        for (i, uid) in enumerate(self.clusters, start=1):
-            cur_cluster = self.clusters[uid]
-            if cur_cluster.size <= merge_size:
-                merged = False
-                candidate = [c[0] for c in self.search(uid, None, id_tolerance)]
-                candidate = [c for c in candidate if c not in remove]
-                if candidate:
-                    candidate = candidate[0]
-                    cand_cluster = self[candidate]
-                    if target_size is None or cand_cluster.size <= target_size:
-                        success = cand_cluster.merge(self[uid], id_tolerance)
-                        if success and candidate:
-                            remove.add(uid)
-                            merged = True
-                if merged:
-                    merge_count += 1
-                else:
-                    small_count += 1
-
-            if self._logger.isEnabledFor(logging.DEBUG) and i % 10000 == 0:
-                self._logger.debug("clusters: %d, small: %d, merged: %d",
-                                   i, small_count + merge_count, merge_count)
-        for uid in remove:
-            del self.clusters[uid]
-            self._store.remove(uid)
-
-        self._logger.info('Clusters merged: %d', merge_count)
-        self._logger.info('Small clusters remaining: %d', small_count)
+            return self._store.find(uid, tolerance)
 
     def write(self, output_file):
         """Write consensus sequences to fastq file.
