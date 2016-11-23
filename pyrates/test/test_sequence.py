@@ -138,4 +138,10 @@ def test_store_find(search, expect):
     store.add("TTTT")
     match = store.find(search, 2)
     assert match == expect, "%r != %r" % (match, expect)
+
+def test_store_list():
+    """Create sequence store from list."""
+    store = SequenceStore.from_list(['AAAA', 'CTGT'])
+    assert "AAAA" in store, "'AAAA' not found in store"
+    assert "CTGT" in store, "'CTGT' not found in store"
     
