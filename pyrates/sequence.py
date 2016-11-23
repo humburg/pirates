@@ -105,6 +105,23 @@ class SequenceStore(object):
         self._wild = wildcard
         self._composition = {letter:[set()]*(max_length+1) for letter in alphabet}
 
+    @classmethod
+    def from_list(cls, sequences, **kw):
+        """Create Sequence store from a list of sequences.
+
+        Args:
+            sequences (:obj:`list`): A list of sequences.
+
+            Additional named arguments will be passed to the SequenceStore constructor.
+
+        Returns:
+            :obj:`pyrates.sequence.SequenceStore`
+        """
+        store = cls(len(sequences[0]), **kw)
+        for seq in sequences:
+            store.add(seq)
+        return store
+
     def add(self, sequence):
         """Add a sequence to the store.
 
@@ -156,26 +173,44 @@ class SequenceStore(object):
             the number of differences between the returned match and the search string.
             If no suitable match was found `None` is returned instead.
         """
+        match = self.search(sequence, 1)
+        if len(match) == 0 or match[0][1] > max_diff:
+            return None
+        return match[0]
+
+    def search(self, sequence, max_hits=10, raw=False):
+        """Search the sequence store for all approximate matches to a search pattern.
+
+        Args:
+            sequence (:obj:`string`): Sequence to search for.
+            max_hits (:obj:`int`, optional): Maximum number of results to return.
+                set to _None_ to return all candidates. Ignored if `raw` is _True_.
+            raw (:obj:`bool`, optional): Flag indicating whether the raw sequence
+                matches should be returned instead of sequence/distance pairs.
+
+        Returns:
+            If `raw` is _True_ an unordered :obj:`list` of candidates is returned,
+            otherwise a list of (sequence, distance) tuples is returned.
+        """
         if sequence in self._index:
-            return (sequence, 0)
+            return [(sequence, 0)]
         wilds = sequence.count(self._wild)
         candidates = set()
         for letter in self._alphabet:
             letter_count = sequence.count(letter)
             candidates.update(*self._composition[letter][letter_count:(letter_count + wilds + 1)])
-        match = None
-        difference = max_diff + 1
-        for cand in candidates:
-            diff = self._diff(sequence, cand)
-            if diff < difference:
-                match = cand
-                difference = diff
-        if match is None:
-            return match
-        return (match, difference)
+        if raw:
+            return candidates
+        candidates = [(cand, self.diff(sequence, cand)) for cand in candidates]
+        candidates.sort(key=lambda x: x[1])
+        if max_hits is not None:
+            candidates = candidates[:max_hits]
+        return candidates
 
     @staticmethod
-    def _diff(seq1, seq2):
+    def diff(seq1, seq2):
+        """Compute Hamming distance between two sequences.
+        """
         diff = 0
         for (i, letter) in enumerate(seq1):
             if letter != seq2[i]:
