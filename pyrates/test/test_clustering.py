@@ -52,7 +52,7 @@ def test_merge_diff(idx):
 @with_teardown(teardown_fastq_simple)
 def test_fastq_simple():
     """Create consensus from fastq file."""
-    cluster = clust.Clustering.from_fastq(TMP + 'simple.fastq', 4, 'ACGT')
+    cluster = clust.Clustering.from_fastq(TMP + 'simple.fastq', 4, 'ACGT', threshold=0)
     uid1_expect = 'AAAACCCC'
     uid2_expect = 'CCCCAAAA'
     seq1_expect = 'ACCTCTCCCTGTGGGTCATGTGACT'
@@ -69,7 +69,10 @@ def test_fastq_simple():
 @with_teardown(teardown_fastq_mismatch)
 def test_fastq_mismatch():
     """Create consensus from reads with mismatches in cluster."""
-    cluster = clust.Clustering.from_fastq(TMP + 'mismatch.fastq', 4, 'ACGT')
+    cluster = clust.Clustering.from_fastq(TMP + 'mismatch.fastq',
+                                          id_length=4,
+                                          adapter='ACGT',
+                                          threshold=0)
     uid1_expect = 'AAAACCCC'
     uid2_expect = 'CCCCAAAA'
     uid3_expect = 'AAAAAAAA'

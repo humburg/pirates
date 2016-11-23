@@ -44,17 +44,16 @@ class Clustering(object):
         total_skipped = 0
         total_merged = 0
         seq = {}
-        id_length = id_length
-        adapt_length = id_length + len(adapter)
 
-        id_set = pseq.SequenceStore(id_length)
+        id_set = pseq.SequenceStore(id_length*2)
         id_map = {}
 
+        adapt_length = id_length + len(adapter)
         open_fun = utils.smart_open(input_file)
         with open_fun(input_file) as fastq:
             for (line_count, line) in enumerate(fastq):
                 # print out some stats as we go
-                if cls._logger.isEnabledFor(logging.DEBUG) and (line_count % 4) == 0:
+                if cls._logger.isEnabledFor(logging.DEBUG) and (line_count % 10000) == 0:
                     cls._logger.debug("reads: %d clusters: %d merged: %d skipped: %d",
                                       line_count/4, len(seq), total_merged, total_skipped)
                 elif (line_count % 4) == 1:
