@@ -89,6 +89,16 @@ def test_store_add():
     assert len(store) == 2, "%r != 2" % len(store)
     assert "CTGT" in store
 
+def test_store_add_wild():
+    """Add entries to sequence store"""
+    store = SequenceStore(4)
+    store.add("AAAA", wildcard='N')
+    assert len(store) == 1, "%r != 1" % len(store)
+    assert "AAAA" in store
+    store.add("CTNT", wildcard='N')
+    assert len(store) == 2, "%r != 2" % len(store)
+    assert "CTNT" in store
+
 def test_store_contains():
     """Test sequences for membership in store"""
     store = SequenceStore(4)
@@ -129,6 +139,19 @@ def test_store_discard():
     assert "CTGT" not in store, "'CTGT' remains in store after removal"
     assert len(store) == 0, "%r != 0" % len(store)
 
+def test_store_search():
+    """Find all approximate matches"""
+    store = SequenceStore(4)
+    store.add("AAAA")
+    store.add("AAAT")
+    store.add("AATT")
+    store.add("ATTT")
+    match = store.search('TTTT', 4, max_hits=None)
+    assert len(match) == 4, "%r != 4" % len(match)
+    match = store.search('TTTT', 2, max_hits=None)
+    assert len(match) == 2, "%r != 2" % len(match)
+
+
 @params(('AAAA', ('AAAA', 0)), ('CATT', ('AATT', 1)), ('GGGG', None))
 def test_store_find(search, expect):
     """Find best approximate match"""
@@ -137,6 +160,16 @@ def test_store_find(search, expect):
     store.add("AATT")
     store.add("TTTT")
     match = store.find(search, 2)
+    assert match == expect, "%r != %r" % (match, expect)
+
+@params(('AANA', ('AAAA', 1)), ('CATT', ('AATT', 1)), ('NGGG', None))
+def test_store_find_wild(search, expect):
+    """Find best approximate match"""
+    store = SequenceStore(4)
+    store.add("AAAA")
+    store.add("AATT")
+    store.add("TTTT")
+    match = store.find(search, 2, wildcard='N')
     assert match == expect, "%r != %r" % (match, expect)
 
 def test_store_list():

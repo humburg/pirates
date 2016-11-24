@@ -166,24 +166,25 @@ class SequenceStore(object):
         if item in self._index:
             self.remove(item)
 
-    def find(self, sequence, max_diff):
+    def find(self, sequence, max_diff, wildcard=None):
         """Find best match for sequence in the store.
 
         Args:
             sequence (:obj:`string`): Sequence to search for.
             max_diff (:obj:`int`): Maximum number of mismatches allowed for a match.
+            wildcard (:obj:`str`, optional): A character that should be treated as a wildcard.
 
         Returns:
             :obj:`tuple`: A tuple consisting of the best match found in the store and
             the number of differences between the returned match and the search string.
             If no suitable match was found `None` is returned instead.
         """
-        match = self.search(sequence, 1)
+        match = self.search(sequence, 1, wildcard=wildcard)
         if len(match) == 0 or match[0][1] > max_diff:
             return None
         return match[0]
 
-    def search(self, sequence, max_hits=10, raw=False, wildcard=None):
+    def search(self, sequence, max_diff, max_hits=10, raw=False, wildcard=None):
         """Search the sequence store for all approximate matches to a search pattern.
 
         Args:
@@ -192,6 +193,7 @@ class SequenceStore(object):
                 set to _None_ to return all candidates. Ignored if `raw` is _True_.
             raw (:obj:`bool`, optional): Flag indicating whether the raw sequence
                 matches should be returned instead of sequence/distance pairs.
+            wildcard (:obj:`str`, optional): A character that should be treated as a wildcard.
 
         Returns:
             If `raw` is _True_ an unordered :obj:`list` of candidates is returned,
@@ -199,31 +201,27 @@ class SequenceStore(object):
         """
         if sequence in self._index:
             return [(sequence, 0)]
+        wilds = 0
         if wildcard is not None:
-            candidates = self._search_wild(sequence, wildcard)
-        else:
-            letter = self._alphabet[0]
+            wilds = sequence.count(wildcard)
+        letter = self._alphabet[0]
+        letter_count = sequence.count(letter)
+        min_count = max(0, letter_count - max_diff)
+        max_count = min(len(self._composition[letter]), letter_count + max_diff + wilds + 1)
+        candidates = set.union(*self._composition[letter][min_count:max_count])
+        for letter in self._alphabet[1:]:
             letter_count = sequence.count(letter)
-            candidates = set.union(self._composition[letter][letter_count])
-            for letter in self._alphabet[1:]:
-                candidates.intersection_update(self._composition[letter][letter_count])
+            min_count = max(0, letter_count - max_diff)
+            max_count = min(len(self._composition[letter]), letter_count + max_diff + wilds + 1)
+            candidates.intersection_update(
+                set.union(*self._composition[letter][min_count:max_count]))
         if raw:
             return candidates
         candidates = [(cand, self.diff(sequence, cand)) for cand in candidates]
         candidates.sort(key=lambda x: x[1])
+        candidates = [cand for cand in candidates if cand[1] <= max_diff]
         if max_hits is not None:
             candidates = candidates[:max_hits]
-        return candidates
-
-    def _search_wild(self, sequence, wildcard):
-        wilds = sequence.count(wildcard)
-        letter = self._alphabet[0]
-        letter_count = sequence.count(letter)
-        candidates = set.union(*self._composition[letter][letter_count:letter_count + wilds + 1])
-        for letter in self._alphabet[1:]:
-            end_index = letter_count + wilds + 1
-            letter_candidates = set.union(*self._composition[letter][letter_count:end_index])
-            candidates.intersection_update(letter_candidates)
         return candidates
 
     @staticmethod
