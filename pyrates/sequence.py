@@ -97,12 +97,11 @@ class SequenceStore(object):
         wildcard (:obj:`string`): A character that should be treated as a wildcard,
             i.e. match all letters in the alphabet.
     """
-    __slots__ = '_alphabet', '_composition', '_index', '_wild'
+    __slots__ = '_alphabet', '_composition', '_index'
 
-    def __init__(self, max_length, alphabet=('A', 'C', 'G', 'T'), wildcard='N'):
+    def __init__(self, max_length, alphabet=('A', 'C', 'G', 'T')):
         self._index = {}
         self._alphabet = alphabet
-        self._wild = wildcard
         self._composition = {letter:[set()]*(max_length+1) for letter in alphabet}
 
     @classmethod
@@ -122,21 +121,27 @@ class SequenceStore(object):
             store.add(seq)
         return store
 
-    def add(self, sequence):
+    def add(self, sequence, wildcard=None):
         """Add a sequence to the store.
 
         Args:
             sequence (:obj:`string`): New sequence to be added.
         """
         if sequence not in self._index:
-            wilds = sequence.count(self._wild)
             self._index[sequence] = {}
-            for letter in self._alphabet:
-                letter_count = sequence.count(letter)
-                letter_index = (letter_count, letter_count + wilds + 1)
-                self._index[sequence][letter] = letter_index
-                for i in range(*letter_index):
-                    self._composition[letter][i].add(sequence)
+            if wildcard is None:
+                for letter in self._alphabet:
+                    letter_count = sequence.count(letter)
+                    self._index[sequence][letter] = (letter_count, letter_count + 1)
+                    self._composition[letter][letter_count].add(sequence)
+            else:
+                wilds = sequence.count(wildcard)
+                for letter in self._alphabet:
+                    letter_count = sequence.count(letter)
+                    letter_index = (letter_count, letter_count + wilds + 1)
+                    self._index[sequence][letter] = letter_index
+                    for i in range(*letter_index):
+                        self._composition[letter][i].add(sequence)
 
     def remove(self, item):
         """Remove a sequence from the sequence store.
@@ -178,7 +183,7 @@ class SequenceStore(object):
             return None
         return match[0]
 
-    def search(self, sequence, max_hits=10, raw=False):
+    def search(self, sequence, max_hits=10, raw=False, wildcard=None):
         """Search the sequence store for all approximate matches to a search pattern.
 
         Args:
@@ -194,17 +199,31 @@ class SequenceStore(object):
         """
         if sequence in self._index:
             return [(sequence, 0)]
-        wilds = sequence.count(self._wild)
-        candidates = set()
-        for letter in self._alphabet:
+        if wildcard is not None:
+            candidates = self._search_wild(sequence, wildcard)
+        else:
+            letter = self._alphabet[0]
             letter_count = sequence.count(letter)
-            candidates.update(*self._composition[letter][letter_count:(letter_count + wilds + 1)])
+            candidates = set.union(self._composition[letter][letter_count])
+            for letter in self._alphabet[1:]:
+                candidates.intersection_update(self._composition[letter][letter_count])
         if raw:
             return candidates
         candidates = [(cand, self.diff(sequence, cand)) for cand in candidates]
         candidates.sort(key=lambda x: x[1])
         if max_hits is not None:
             candidates = candidates[:max_hits]
+        return candidates
+
+    def _search_wild(self, sequence, wildcard):
+        wilds = sequence.count(wildcard)
+        letter = self._alphabet[0]
+        letter_count = sequence.count(letter)
+        candidates = set.union(*self._composition[letter][letter_count:letter_count + wilds + 1])
+        for letter in self._alphabet[1:]:
+            end_index = letter_count + wilds + 1
+            letter_candidates = set.union(*self._composition[letter][letter_count:end_index])
+            candidates.intersection_update(letter_candidates)
         return candidates
 
     @staticmethod
