@@ -54,7 +54,7 @@ class Clustering(object):
                 if no valid match was found.
         """
         nameid = uid.sequence
-        id_cands = self._store.search(nameid, raw=True, wildcard=wildcard)
+        id_cands = self._store.search(nameid, max_diff=threshold, raw=True, wildcard=wildcard)
         id_cands = self._filter(nameid, id_cands, read_seq)
         if id_cands:
             similar_id = min(id_cands, key=lambda x: x[1])
