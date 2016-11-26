@@ -200,6 +200,8 @@ class SequenceStore(object):
             otherwise a list of (sequence, distance) tuples is returned.
         """
         if sequence in self._index:
+            if raw:
+                return [sequence]
             return [(sequence, 0)]
         wilds = 0
         if wildcard is not None:

@@ -5,6 +5,7 @@ from nose2.tools import params
 from nose2.tools.decorators import with_setup, with_teardown
 
 import pyrates.clustering as clust
+import pyrates.sequence as pseq
 from pyrates.test import TMP
 from pyrates.test.fixtures import (setup_fastq_mismatch, setup_fastq_simple,
                                    teardown_fastq_mismatch, teardown_fastq_simple,
@@ -47,6 +48,31 @@ def test_merge_diff(idx):
     obs = str(merged).splitlines()
     assert merged.size == 12, "%r != %r" % (merged.size, 12)
     assert obs[0] == expect, "%r != %r" % (obs[0], expect)
+
+def test_merge_targets():
+    """Identify cluster for merging"""
+    uid1 = "ACCT"
+    uid2 = "GGGG"
+    uid3 = "AAGG"
+
+    seq1 = ["ACTGTTTGTCTAAGC"]*2
+    qual1 = ['I'*len(seq1[0])]*len(seq1)
+    seq2 = ["ACTGTTTTTCTAAGC"]*5
+    qual2 = ['I'*len(seq2[0])]*len(seq2)
+    seq3 = ["ACTGTTTTTCTAAGC"]*2
+    qual3 = ['I'*len(seq3[0])]*len(seq3)
+
+    clusters = create_consensus([uid1 + uid1]*len(seq1) + \
+                                   [uid2 + uid2]*len(seq2),
+                                ['I'*(len(uid1)*2)]*(len(seq1) + len(seq2)),
+                                seq1 + seq2, qual1 + qual2)
+    seq3 = [pseq.SequenceWithQuality(seq, qual) for seq, qual in zip(seq3, qual3)]
+    uid = pseq.SequenceWithQuality(uid2 + uid3, 'I'*(len(uid2) + len(uid3)))
+    cand = clusters.merge_target(uid, seq3[0], {}, 2, None)
+    assert cand == uid2 + uid2, "%r != %r" % (cand, uid2 + uid2)
+    cand = clusters.merge_target(uid, seq3[0], {}, 1, None)
+    assert cand is None, "%r != %r" % (cand, None)
+
 
 @with_setup(setup_fastq_simple)
 @with_teardown(teardown_fastq_simple)

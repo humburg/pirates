@@ -58,7 +58,7 @@ class Clustering(object):
         id_cands = self._filter(nameid, id_cands, read_seq)
         if id_cands:
             similar_id = min(id_cands, key=lambda x: x[1])
-            if not similar_id or similar_id[0][1] > threshold:
+            if not similar_id or similar_id[1] > threshold:
                 similar_id = None
             else:
                 similar_id = similar_id[0]
@@ -69,6 +69,7 @@ class Clustering(object):
             self.clusters[nameid] = cons.Consensus(uid, read_seq)
             self._store.add(nameid, wildcard=wildcard)
         else:
+            similar_id = similar_id
             id_map[nameid] = similar_id
         return similar_id
 
