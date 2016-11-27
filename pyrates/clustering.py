@@ -143,25 +143,6 @@ class Clustering(object):
                     seq.add(uid, read_seq, 'N')
         return seq
 
-    def find(self, uid, tolerance=3):
-        """Find best approximate match for UIDs.
-
-        Args:
-            uid (:obj:`str`): UID for which the best match should be returned.
-            tolerance (:obj:`int`): Number of mismatcheds that should be tolerated.
-
-        Returns:
-            :obj:`str`: If a match was found the best matching UID in the Clustering
-                is returned, otherwise :obj:`None`.
-        """
-        if tolerance is None or tolerance == 0:
-            if uid in self:
-                return uid
-            else:
-                return None
-        else:
-            return self._store.find(uid, tolerance)
-
     def write(self, output_file):
         """Write consensus sequences to fastq file.
 
