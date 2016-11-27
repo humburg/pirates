@@ -3,16 +3,15 @@
 
 import argparse
 import datetime
-import gzip
 import resource
 import time
 import logging
 
-import pyrates.consensus as cons
+import pyrates.clustering as clust
 import pyrates.utils as utils
-import pyrates.sequence as pseq
 from . import __version__
 from ._version import get_versions
+
 
 def main():
     """Entrypoint for command-line interface
@@ -43,6 +42,22 @@ def main():
         ' between the UID and the actual read sequence.'
     )
     parser.add_argument(
+        '--merge-size', '-m',
+        default=3,
+        help='Attempt to merge clusters no larger than this into larger clusters.'
+    )
+    parser.add_argument(
+        '--merge-target',
+        default=10,
+        help='Maximum size for clusters to be considered as a target for the merging' +
+        ' of smaller clusters.'
+    )
+    parser.add_argument(
+        '--id-tolerance',
+        default=5,
+        help='Maximum number of differences between IDs allowed to consider merging of clusters.'
+    )
+    parser.add_argument(
         '--log',
         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
         default='INFO',
@@ -60,46 +75,16 @@ def main():
     logger.info('This is pyrates ' + __version__)
     logger.debug('At revision ' + get_versions()['full-revisionid'])
     logger.info('Processing input file ' + args.fastq)
+    if args.merge_size and args.merge_target:
+        logger.info("Will merge clusters smaller than %d into clusters no larger than than %d",
+                    args.merge_size, args.merge_target)
+    else:
+        logger.warning("Merging of small clusters is disabled.")
     logger.info('Consensus sequences will go to ' + args.output)
-
-    input_fun = open
-    if args.fastq.endswith('.gz'):
-        input_fun = gzip.open
-    output_fun = open
-    if args.output.endswith('.gz'):
-        output_fun = gzip.open
 
     ## start consensus computation
     started_at = time.time()
-    line_count = 0
-    total_skipped = 0
-    seq = {}
-    id_length = args.id_length
-    adapt_length = args.id_length + len(args.adapter)
-    with input_fun(args.fastq) as fastq:
-        for line in fastq:
-            # print out some stats as we go
-            if logger.isEnabledFor(logging.DEBUG) and (line_count % 100000) == 0:
-                logger.debug("reads: %d clusters: %d skipped: %d",
-                             line_count/4, len(seq), total_skipped)
-            elif (line_count % 4) == 1:
-                line = line.rstrip("\n")
-                nameid = line[0:id_length] + line[-id_length:]
-                sequence = line[adapt_length:-adapt_length]
-            elif (line_count % 4) == 3:
-                line = line.rstrip("\n")
-                qnameid = line[0:id_length] + line[-id_length:]
-                qsequence = line[adapt_length:-adapt_length]
-
-                uid = pseq.SequenceWithQuality(nameid, qnameid)
-                read_seq = pseq.SequenceWithQuality(sequence, qsequence)
-                if nameid not in seq:
-                    seq[nameid] = cons.Consensus(uid, read_seq)
-                else:
-                    success = seq[nameid].update(uid, read_seq)
-                    if not success:
-                        total_skipped += 1
-            line_count += 1
+    seq = clust.Clustering.from_fastq(args.fastq, args.id_length, args.adapter)
 
     if logger.isEnabledFor(logging.INFO):
         total_different = 0
@@ -117,15 +102,6 @@ def main():
                     total_shorter)
         logger.info("Number of sequences that were longer then consensus sequence %d",
                     total_longer)
-
-    #
-    # Print everything out
-    # '@'int [int,A,int,C,int,T,int,G,int,N,int ...]
-    #
-    with output_fun(args.output, 'w') as output:
-        for consensus in sorted(seq.values(), key=lambda x: x.size):
-            output.write(str(consensus) + "\n")
-
-    logger.info('Time taken: %s', str(datetime.timedelta(seconds=time.time() - started_at)))
+    logger.info('Total time taken: %s', str(datetime.timedelta(seconds=time.time() - started_at)))
     mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
     logger.info('Memory used: %.2f MB', mem)

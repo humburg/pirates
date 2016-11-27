@@ -63,7 +63,7 @@ class Consensus(object):
                 qual_update[i] = qual_other
         self.uid.quality = ''.join(qual_update)
 
-    def update(self, uid_other, seq_other):
+    def update(self, uid_other, seq_other, size_other=1, diffs_other=None, discard=True):
         """Update consensus sequence.
 
         The read represented by `seq_other` is added to the consensus.
@@ -74,6 +74,15 @@ class Consensus(object):
             seq_other (:obj:`pyrates.sequence.SequenceWithQuality`): Read
                 sequence with associated qualities for read that is to be
                 added to the consensus.
+            size_other (:obj:`int`, optional): Treat the sequence provided for
+                updating as a representative of this many sequences.
+            diffs_other (:obj:`dict`, optional): Differences already recorded
+                for other sequence.
+            discard (:obj:`bool`, optional): If this is `True` sequences that
+                are rejected for consensus computations are counted and are
+                assumed to be excluded from further concideration. They are
+                essentially assigned to this cluster but don't affect the
+                consensus sequence.
 
         Returns:
             :obj:`bool`: `True` if the sequence was successfully added to the
@@ -87,58 +96,98 @@ class Consensus(object):
                                self.uid.sequence, uid_other.sequence)
             return False
 
-        # if grossly different then just count this and move on
-        if self.sequence.grosslydifferent(seq_other):
-            self.different += 1
-            return False
-
         # if sequence length is shorter, count this occurance, abandon this
         # sequence and move on
         if len(self.sequence) > len(seq_other):
-            self.shorter += 1
+            if discard:
+                self.shorter += size_other
+            self._logger.debug("Mismatch in sequence length")
             return False
 
         # if new sequence is longer, count this occurance
         # replace consensus sequence if built from only one other sequence
         if len(self.sequence) < len(seq_other):
-            if self.size == 1:
-                self.sequence = seq_other
-                self.shorter += 1
-            else: self.longer += 1
+            if discard:
+                if self.size == 1:
+                    self.sequence = seq_other
+                    self.shorter += size_other
+                else: self.longer += size_other
+            self._logger.debug("Mismatch in sequence length")
             return False
+
+        # if grossly different then just count this and move on
+        if self.sequence.grosslydifferent(seq_other):
+            if discard:
+                self.different += size_other
+            self._logger.debug("Sequences are too different")
+            return False
+
 
         self._update_uid(uid_other)
 
-        # step through sequence, record highest quality at each step, want to save diffs
-        # for changes to the sequence but not the quality
+        # Step through sequence, record highest quality at each step, want to save diffs
+        # for changes to the sequence but not the quality.
+        # If we encounter a mismatch between consensus and newly observed read,
+        # keep the current sequence
         seq_update = self.sequence.sequence
         qual_update = self.sequence.quality
         qual_other = seq_other.quality
         seq_other = seq_other.sequence
-        max_qual = list(map(max, zip(zip(qual_update, seq_update, [0]*len(qual_update)),
-                                     zip(qual_other, seq_other, [1]*len(qual_other)))))
+        max_qual = list(map(max, zip(zip(qual_other, [0]*len(qual_other), seq_other),
+                                     zip(qual_update, [1]*len(qual_update), seq_update))))
         qual_update = [q[0] for q in max_qual]
         diff = [s != o for s, o in zip(seq_update, seq_other)]
+        if diffs_other is None:
+            diffs_other = {}
+        if diffs_other:
+            for i in diffs_other:
+                if i not in self.diffs:
+                    self.diffs[i][seq_update[i]] += self.size
+                for nuc in diffs_other[i]:
+                    self.diffs[i][nuc] += diffs_other[i][nuc]
         if any(diff):
             for (i, is_diff) in enumerate(diff):
-                # check if new sequence has different nucliotide value at this position
+                # check if new sequence has different nucleotide at this position
                 if is_diff:
-                    nuc = seq_update[i]
-                    nuc_other = seq_other[i]
-                    # update diff to record reading discrepancy at this position
-                    if self.diffs[i][nuc] == 0:
-                        # update for count seen so far
-                        self.diffs[i][nuc] = self.size
-                    self.diffs[i][nuc_other] += 1
+                    if i not in diffs_other:
+                        nuc = seq_update[i]
+                        nuc_other = seq_other[i]
+                        # update diff to record reading discrepancy at this position
+                        if self.diffs[i][nuc] == 0:
+                            # update for count seen so far
+                            self.diffs[i][nuc] = self.size
+                        self.diffs[i][nuc_other] += size_other
                 elif i in self.diffs:
-                    self.diffs[i][seq_update[i]] += 1
-            seq_update = [q[1] for q in max_qual]
+                    self.diffs[i][seq_update[i]] += size_other
+            seq_update = [q[2] for q in max_qual]
             self.sequence.sequence = ''.join(seq_update)
-        self.size += 1
+        elif self.diffs and not diffs_other:
+            for i in self.diffs:
+                self.diffs[i][seq_update[i]] += size_other
+        self.size += size_other
 
         # regardless of sequence values we will remember the highest quality value
         self.sequence.quality = ''.join(map(max, zip(qual_update, qual_other)))
         return True
+
+    def merge(self, other, tolerance):
+        """Merge two consensus sequences.
+
+        Merging will only be attempted if the UIDs don't differ at more than `tolerance`
+        positions.
+
+        Args:
+            other (:obj:`pyrates.consensus.Consensus`): The consensus sequence to merge into
+                this one.
+            tolerance (:obj:`int`): The maximum number of differences between UIDs.
+
+        Returns:
+            :obj:`bool`: `True` if the sequences were successfully merged, `False` otherwise.
+        """
+        if self.uid.grosslydifferent(other.uid, len(self.uid), tolerance):
+            return False
+        return self.update(other.uid, other.sequence, other.size, diffs_other=other.diffs,
+                           discard=False)
 
     def __str__(self):
         diff_str = ''

@@ -3,7 +3,7 @@
 import gzip
 
 fname = "data/fastq/Jurkat_only.assembled.fastq.gz"
-f = gzip.open(, "r")
+f = gzip.open(fname, "r")
 
 c = 0
 

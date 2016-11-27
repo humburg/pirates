@@ -42,6 +42,6 @@ setup(
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
     ],
-    install_require=dependencies('requirements.txt'),
+    install_requires=dependencies('requirements.txt'),
     test_suite='nose2.collector.collector',
 )
