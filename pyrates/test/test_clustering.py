@@ -190,3 +190,34 @@ def test_keys():
                                 ['I'*(len(uid1)*2)]*len(seq1),
                                 seq1, qual1)
     assert list(clusters.keys()) == ['ACCTACCT'], "%r != %r" % (list(clusters.keys()), ['ACCTACCT'])
+
+def test_values():
+    """Retrieve cluster consensus"""
+    uid1 = "ACCT"
+
+    seq1 = ["ACTGTTTGTCTAAGC"]*2
+    qual1 = ['I'*len(seq1[0])]*len(seq1)
+
+    clusters = create_consensus([uid1 + uid1]*len(seq1),
+                                ['I'*(len(uid1)*2)]*len(seq1),
+                                seq1, qual1)
+    values = list(clusters.values())
+    assert len(values) == 1, "%r != %r" % (len(values), 1)
+    assert  values[0].sequence.sequence == "ACTGTTTGTCTAAGC", "%r != %r" % \
+                                 (values[0].sequence.sequence, ['ACCTACCT'])
+
+def test_iteritems():
+    """Retrieve cluster IDs"""
+    uid1 = "ACCT"
+
+    seq1 = ["ACTGTTTGTCTAAGC"]*2
+    qual1 = ['I'*len(seq1[0])]*len(seq1)
+
+    clusters = create_consensus([uid1 + uid1]*len(seq1),
+                                ['I'*(len(uid1)*2)]*len(seq1),
+                                seq1, qual1)
+    expected = [('ACCTACCT', "ACTGTTTGTCTAAGC")]
+    for (obs, expect) in zip(clusters.items(), expected):
+        assert obs[0] == expect[0], "%r != %r" % (obs[0], expect[0])
+        assert obs[1].sequence.sequence == expect[1], "%r != %r" % \
+                                 (obs[1].sequence.sequence, expect[1])
