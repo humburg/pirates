@@ -45,6 +45,50 @@ def teardown_fastq_simple():
     """Remove files created for simple fastq test"""
     os.remove(TMP + 'simple.fastq')
 
+def setup_fastq_missing():
+    """Create fastq file with reads from two clusters without UID errors."""
+    uid1 = 'AAAA'
+    uid2 = 'CCCC'
+    uid3 = 'AANA'
+
+    adapter = 'ACGT'
+    adapter_rev = 'ACGT'
+    read1 = ['ACCTCTCCCTGTGGGTCATGTGACT']*3
+    read1 = [uid1 + adapter + r + adapter_rev + uid2 for r in read1]
+    read2 = ['TTGTTTGAAAAACCTCGAAAGTAAC']*5
+    read2 = [uid2 + adapter + r + adapter_rev + uid1 for r in read2]
+    read3 = [uid3 + adapter + 'ACCTCTCCCTGTGGGTCATGTGACT' + adapter_rev + uid2]
+    read4 = [uid3 + adapter + 'GTGGGTCATGGTGGGTCATGTGACT' + adapter_rev + uid1]
+
+    qual = ['I'*len(read1[0])]*(len(read1) + len(read2)+ len(read3) + len(read4))
+    create_fastq(read1 + read2 + read3 + read4, qual, 'missing.fastq')
+
+def teardown_fastq_missing():
+    """Remove files created for simple fastq test"""
+    os.remove(TMP + 'missing.fastq')
+
+def setup_fastq_map():
+    """Create fastq file with reads from two clusters without UID errors."""
+    uid1 = 'AAAA'
+    uid2 = 'CCCC'
+    uid3 = 'AATA'
+
+    adapter = 'ACGT'
+    adapter_rev = 'ACGT'
+    read1 = ['ACCTCTCCCTGTGGGTCATGTGACT']*3
+    read1 = [uid1 + adapter + r + adapter_rev + uid2 for r in read1]
+    read2 = ['TTGTTTGAAAAACCTCGAAAGTAAC']*5
+    read2 = [uid2 + adapter + r + adapter_rev + uid1 for r in read2]
+    read3 = [uid3 + adapter + 'ACCTCTCCCTGTGGGTCATGTGACT' + adapter_rev + uid2]*2
+
+    qual = ['I'*len(read1[0])]*(len(read1) + len(read2)+ len(read3))
+    create_fastq(read1 + read2 + read3, qual, 'map.fastq')
+
+def teardown_fastq_map():
+    """Remove files created for simple fastq test"""
+    os.remove(TMP + 'map.fastq')
+
+
 def setup_fastq_mismatch():
     """Create fastq file with reads from three clusters with errors in sequence."""
     uid1 = 'AAAA'

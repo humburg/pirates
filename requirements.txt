@@ -1,5 +1,4 @@
 argparse
 cov-core == 1.15.0
-git+https://github.com/gpoulter/python-ngram.git@master
 nose2 >= 0.3
 versioneer == 0.17
