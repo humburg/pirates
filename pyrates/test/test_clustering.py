@@ -8,6 +8,8 @@ import pyrates.clustering as clust
 import pyrates.sequence as pseq
 from pyrates.test import TMP
 from pyrates.test.fixtures import (setup_fastq_mismatch, setup_fastq_simple,
+                                   setup_fastq_missing, setup_fastq_map,
+                                   teardown_fastq_map, teardown_fastq_missing,
                                    teardown_fastq_mismatch, teardown_fastq_simple,
                                    create_consensus)
 
@@ -91,6 +93,45 @@ def test_fastq_simple():
     assert cluster[uid2_expect].sequence.sequence == seq2_expect, \
            "%r != %r" % (cluster[uid2_expect].sequence.sequence, seq2_expect)
 
+@with_setup(setup_fastq_missing)
+@with_teardown(teardown_fastq_missing)
+def test_fastq_missing():
+    """Create consensus from fastq file."""
+    cluster = clust.Clustering.from_fastq(TMP + 'missing.fastq', 4, 'ACGT', threshold=2)
+    uid1_expect = 'AAAACCCC'
+    uid2_expect = 'CCCCAAAA'
+    seq1_expect = 'ACCTCTCCCTGTGGGTCATGTGACT'
+    seq2_expect = 'TTGTTTGAAAAACCTCGAAAGTAAC'
+
+    assert uid1_expect in cluster, "%r not in %r" % (uid1_expect, list(cluster.keys()))
+    assert uid2_expect in cluster, "%r not in %r" % (uid2_expect, list(cluster.keys()))
+    assert cluster[uid1_expect].sequence.sequence == seq1_expect, \
+           "%r != %r" % (cluster[uid1_expect].sequence.sequence, seq1_expect)
+    assert cluster[uid2_expect].sequence.sequence == seq2_expect, \
+           "%r != %r" % (cluster[uid2_expect].sequence.sequence, seq2_expect)
+    assert cluster[uid1_expect].size == 4, "%r != %r" % (cluster[uid1_expect].size, 4)
+    assert cluster[uid2_expect].size == 5, "%r != %r" % (cluster[uid2_expect].size, 5)
+
+@with_setup(setup_fastq_map)
+@with_teardown(teardown_fastq_map)
+def test_fastq_map():
+    """Create consensus from fastq file."""
+    cluster = clust.Clustering.from_fastq(TMP + 'map.fastq', 4, 'ACGT', threshold=2)
+    uid1_expect = 'AAAACCCC'
+    uid2_expect = 'CCCCAAAA'
+    seq1_expect = 'ACCTCTCCCTGTGGGTCATGTGACT'
+    seq2_expect = 'TTGTTTGAAAAACCTCGAAAGTAAC'
+
+    assert uid1_expect in cluster, "%r not in %r" % (uid1_expect, list(cluster.keys()))
+    assert uid2_expect in cluster, "%r not in %r" % (uid2_expect, list(cluster.keys()))
+    assert cluster[uid1_expect].sequence.sequence == seq1_expect, \
+           "%r != %r" % (cluster[uid1_expect].sequence.sequence, seq1_expect)
+    assert cluster[uid2_expect].sequence.sequence == seq2_expect, \
+           "%r != %r" % (cluster[uid2_expect].sequence.sequence, seq2_expect)
+    assert cluster[uid1_expect].size == 5, "%r != %r" % (cluster[uid1_expect].size, 5)
+    assert cluster[uid2_expect].size == 5, "%r != %r" % (cluster[uid2_expect].size, 5)
+
+
 @with_setup(setup_fastq_mismatch)
 @with_teardown(teardown_fastq_mismatch)
 def test_fastq_mismatch():
@@ -115,3 +156,34 @@ def test_fastq_mismatch():
            "%r != %r" % (cluster[uid2_expect].sequence.sequence, seq2_expect)
     assert cluster[uid3_expect].sequence.sequence == seq3_expect, \
            "%r != %r" % (cluster[uid3_expect].sequence.sequence, seq3_expect)
+
+@with_teardown(lambda: os.remove(TMP + "write.fastq"))
+def test_write():
+    """Write fastq output"""
+    uid1 = "ACCT"
+
+    seq1 = ["ACTGTTTGTCTAAGC"]*2
+    qual1 = ['I'*len(seq1[0])]*len(seq1)
+
+    clusters = create_consensus([uid1 + uid1]*len(seq1),
+                                ['I'*(len(uid1)*2)]*len(seq1),
+                                seq1, qual1)
+    clusters.write(TMP + "write.fastq")
+    expect = str(clusters['ACCTACCT']).split("\n")
+    with open(TMP + "write.fastq") as output:
+        for (i, (out_line, expect_line)) in  enumerate(zip(output, expect), 1):
+            out_line = out_line.strip("\n")
+            assert out_line == expect_line, "Error in line %r of fastq record:\n%r\n  !=\n%r" % \
+                    (i, out_line, expect_line)
+
+def test_keys():
+    """Retrieve cluster IDs"""
+    uid1 = "ACCT"
+
+    seq1 = ["ACTGTTTGTCTAAGC"]*2
+    qual1 = ['I'*len(seq1[0])]*len(seq1)
+
+    clusters = create_consensus([uid1 + uid1]*len(seq1),
+                                ['I'*(len(uid1)*2)]*len(seq1),
+                                seq1, qual1)
+    assert list(clusters.keys()) == ['ACCTACCT'], "%r != %r" % (list(clusters.keys()), ['ACCTACCT'])
