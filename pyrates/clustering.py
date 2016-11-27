@@ -132,15 +132,18 @@ class Clustering(object):
                     else:
                         seq.add(uid, read_seq, None)
             for nameid in id_wild:
-                similar_id = seq.merge_target(uid, read_seq, id_map, threshold, 'N')
-                if similar_id is not None:
-                    success = seq[similar_id].update(uid, read_seq)
-                    if success:
-                        total_merged += 1
+                uid = id_wild[nameid][0][0]
+                for item in id_wild[nameid]:
+                    read_seq = item[1]
+                    similar_id = seq.merge_target(uid, read_seq, id_map, threshold, 'N')
+                    if similar_id is not None:
+                        success = seq[similar_id].update(uid, read_seq)
+                        if success:
+                            total_merged += 1
+                        else:
+                            total_skipped += 1
                     else:
-                        total_skipped += 1
-                else:
-                    seq.add(uid, read_seq, 'N')
+                        seq.add(uid, read_seq, 'N')
         return seq
 
     def write(self, output_file):

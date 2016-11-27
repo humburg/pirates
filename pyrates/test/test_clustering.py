@@ -100,17 +100,20 @@ def test_fastq_missing():
     cluster = clust.Clustering.from_fastq(TMP + 'missing.fastq', 4, 'ACGT', threshold=2)
     uid1_expect = 'AAAACCCC'
     uid2_expect = 'CCCCAAAA'
+    uid3_expect = 'AANAAAAA'
     seq1_expect = 'ACCTCTCCCTGTGGGTCATGTGACT'
     seq2_expect = 'TTGTTTGAAAAACCTCGAAAGTAAC'
 
     assert uid1_expect in cluster, "%r not in %r" % (uid1_expect, list(cluster.keys()))
     assert uid2_expect in cluster, "%r not in %r" % (uid2_expect, list(cluster.keys()))
+    assert uid3_expect in cluster, "%r not in %r" % (uid3_expect, list(cluster.keys()))
     assert cluster[uid1_expect].sequence.sequence == seq1_expect, \
            "%r != %r" % (cluster[uid1_expect].sequence.sequence, seq1_expect)
     assert cluster[uid2_expect].sequence.sequence == seq2_expect, \
            "%r != %r" % (cluster[uid2_expect].sequence.sequence, seq2_expect)
     assert cluster[uid1_expect].size == 4, "%r != %r" % (cluster[uid1_expect].size, 4)
     assert cluster[uid2_expect].size == 5, "%r != %r" % (cluster[uid2_expect].size, 5)
+    assert cluster[uid3_expect].size == 1, "%r != %r" % (cluster[uid2_expect].size, 1)
 
 @with_setup(setup_fastq_map)
 @with_teardown(teardown_fastq_map)

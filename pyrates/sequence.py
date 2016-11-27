@@ -1,5 +1,6 @@
 """Classes and functions to handle sequence data.
 """
+import pyrates.utils as utils
 
 class SequenceWithQuality(object):
     """A sequence and its quality scores.
@@ -98,11 +99,12 @@ class SequenceStore(object):
             i.e. match all letters in the alphabet.
     """
     __slots__ = '_alphabet', '_composition', '_index'
+    _logger = utils.get_logger(__name__)
 
     def __init__(self, max_length, alphabet=('A', 'C', 'G', 'T')):
         self._index = {}
         self._alphabet = alphabet
-        self._composition = {letter:[set()]*(max_length+1) for letter in alphabet}
+        self._composition = {letter:[set() for _ in range(max_length+1)] for letter in alphabet}
 
     @classmethod
     def from_list(cls, sequences, **kw):
