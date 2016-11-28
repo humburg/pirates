@@ -11,12 +11,13 @@ class SequenceWithQuality(object):
             consisting of ASCII encoded phred scores.
         name (:obj:`str`, optional): Name to use for sequence.
     """
-    __slots__ = '_sequence', '_quality', 'name'
+    __slots__ = '_sequence', '_quality', '_len', 'name'
     def __init__(self, sequence, quality, name=''):
         if len(sequence) != len(quality):
             raise ValueError("Sequence and quality have to have same length.")
         self._sequence = sequence
         self._quality = quality
+        self._len = len(sequence)
         self.name = name
 
     @property
@@ -81,7 +82,7 @@ class SequenceWithQuality(object):
                 (self.sequence, self.quality, self.name)
 
     def __len__(self):
-        return len(self.sequence)
+        return self._len
 
     def __getitem__(self, key):
         return (self._sequence[key], self._quality[key])
