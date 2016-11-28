@@ -3,8 +3,12 @@ MAINTAINER Peter Humburg <p.humburg@garvan.org.au>
 
 ## Install dependencies through distribution packages
 RUN apt-get update && apt-get install -y \
-    python \
+    software-properties-common && \
+    add-apt-repository ppa:pypy/ppa
+RUN apt-get update && apt-get install -y \
+    pypy \
     python-pip \
+    virtualenv \
     zlib1g-dev \
     zip \
     libncurses5-dev \
@@ -13,6 +17,10 @@ RUN apt-get update && apt-get install -y \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+## create virtual environment for pypy
+RUN virtualenv -p /usr/bin/pypy /pypy_env && \
+    . /pypy_env/bin/activate
 
 ## Install required python packages
 ADD requirements.txt /tmp/install
