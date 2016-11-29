@@ -70,9 +70,9 @@ def test_merge_targets():
                                 seq1 + seq2, qual1 + qual2)
     seq3 = [pseq.SequenceWithQuality(seq, qual) for seq, qual in zip(seq3, qual3)]
     uid = pseq.SequenceWithQuality(uid2 + uid3, 'I'*(len(uid2) + len(uid3)))
-    cand = clusters.merge_target(uid, seq3[0], {}, 2, None)
+    cand = clusters.merge_target(uid, seq3[0], {}, 2)
     assert cand == uid2 + uid2, "%r != %r" % (cand, uid2 + uid2)
-    cand = clusters.merge_target(uid, seq3[0], {}, 1, None)
+    cand = clusters.merge_target(uid, seq3[0], {}, 1)
     assert cand is None, "%r != %r" % (cand, None)
 
 
