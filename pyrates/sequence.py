@@ -96,8 +96,6 @@ class SequenceStore(object):
     Args:
         max_length (:obj:`int`): Maximum sequence length supported by this store.
         alphabet (:obj:`tuple`): A list of all valid sequence characters.
-        wildcard (:obj:`string`): A character that should be treated as a wildcard,
-            i.e. match all letters in the alphabet.
     """
     __slots__ = '_alphabet', '_composition', '_index'
     _logger = utils.get_logger(__name__)
@@ -129,6 +127,7 @@ class SequenceStore(object):
 
         Args:
             sequence (:obj:`string`): New sequence to be added.
+            wildcard (:obj:`string`): Character that should be treated as wildcard.
         """
         if sequence not in self._index:
             self._index[sequence] = {}
