@@ -181,7 +181,7 @@ class SequenceStore(object):
             the number of differences between the returned match and the search string.
             If no suitable match was found `None` is returned instead.
         """
-        match = self.search(sequence, 1, wildcard=wildcard)
+        match = self.search(sequence, max_diff, 1, wildcard=wildcard)
         if len(match) == 0 or match[0][1] > max_diff:
             return None
         return match[0]
