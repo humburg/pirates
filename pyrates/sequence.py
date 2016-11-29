@@ -213,13 +213,16 @@ class SequenceStore(object):
         letter_count = sequence.count(letter)
         min_count = max(0, letter_count - max_diff)
         max_count = min(len(self._composition[letter]), letter_count + max_diff + wilds + 1)
-        candidates = set.union(*self._composition[letter][min_count:max_count])
+        candidates = []
+        for cand in self._composition[letter][min_count:max_count]:
+            candidates.extend(cand)
         for letter in self._alphabet[1:]:
             letter_count = sequence.count(letter)
             min_count = max(0, letter_count - max_diff)
             max_count = min(len(self._composition[letter]), letter_count + max_diff + wilds + 1)
-            candidates.intersection_update(
-                set.union(*self._composition[letter][min_count:max_count]))
+            for cand in self._composition[letter][min_count:max_count]:
+                candidates.extend(cand)
+        candidates = set(candidates)
         if raw:
             return candidates
         candidates = [(cand, self.diff(sequence, cand)) for cand in candidates]
