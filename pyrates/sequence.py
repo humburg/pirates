@@ -221,7 +221,7 @@ class SequenceStore(object):
             max_count = min(len(self._composition[letter]), letter_count + max_diff + wilds + 1)
             for cand in self._composition[letter][min_count:max_count]:
                 candidates.extend(cand)
-        candidates = set(candidates)
+        candidates = list(set(candidates))
         if raw:
             return candidates
         candidates = [(cand, self.diff(sequence, cand)) for cand in candidates]
