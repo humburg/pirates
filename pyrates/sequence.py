@@ -1,6 +1,7 @@
 """Classes and functions to handle sequence data.
 """
 import pyrates.utils as utils
+import itertools as iter
 
 class SequenceWithQuality(object):
     """A sequence and its quality scores.
@@ -246,3 +247,175 @@ class SequenceStore(object):
 
     def __contains__(self, item):
         return item in self._index
+
+class GroupedSequenceStore(object):
+    """Store a collection of sequences.
+
+    This behaves like a SequenceStore but provides improved performance for large datasets.
+    Incresed performance is achieved by maintaining a number of smaller sequence stores for
+    a subset of the data. The number of storage classes used is |alphabet|**tag_size.
+
+    Args:
+        max_length (:obj:`int`): Maximum sequence length supported by this store.
+        alphabet (:obj:`tuple`): A list of all valid sequence characters.
+        tag_size (:obj:`int`): Length of prefix to use for grouping of reads.
+        wildcard (:obj:`string`): Character that should be treated as wildcard.
+    """
+    __slots__ = '_alphabet', '_store', '_wild_store', '_wildcard', '_tag_size', '_tag_diff', \
+                '_length'
+    _logger = utils.get_logger(__name__)
+
+    def __init__(self, max_length, alphabet=('A', 'C', 'G', 'T'), tag_size=4, wildcard=None):
+        self._alphabet = alphabet
+        self._tag_size = tag_size
+        self._store = {''.join(tag):SequenceStore(max_length, alphabet) for
+                       tag in iter.product(alphabet, repeat=tag_size)}
+        self._tag_diff = {tag:{other:SequenceStore.diff(tag, other) for
+                               other in self._store} for tag in self._store}
+        self._wild_store = SequenceStore(max_length, alphabet)
+        self._wildcard = wildcard
+        self._length = 0
+
+    @classmethod
+    def from_list(cls, sequences, **kw):
+        """Create GroupedSequenceStore from a list of sequences.
+
+        Args:
+            sequences (:obj:`list`): A list of sequences.
+
+            Additional named arguments will be passed to the SequenceStore constructor.
+
+        Returns:
+            :obj:`pyrates.sequence.SequenceStore`
+        """
+        store = cls(len(sequences[0]), **kw)
+        for seq in sequences:
+            store.add(seq)
+        return store
+
+    def add(self, sequence):
+        """Add a sequence to the store.
+
+        Args:
+            sequence (:obj:`string`): New sequence to be added.
+        """
+        tag = sequence[:self._tag_size]
+        if tag not in self:
+            if self._wildcard is not None and self._wildcard in tag:
+                self._wild_store.add(sequence)
+            else:
+                self._store[tag].add(sequence, self._wildcard)
+            self._length += 1
+
+    def remove(self, item):
+        """Remove a sequence from the sequence store.
+
+        Args:
+            item (:obj:`string`): Sequence to be removed.
+
+        Raises:
+            KeyError: if the sequence doesn't exist in the store.
+        """
+        tag = item[:self._tag_size]
+        if self._wildcard is not None and self._wildcard in tag:
+            self._wild_store.remove(item)
+        else:
+            self._store[tag].remove(item)
+        self._length -= 1
+
+    def discard(self, item):
+        """Remove a sequence from the store if it exists.
+
+        Args:
+            item (:obj:`string`): Sequence to be removed.
+        """
+        tag = item[:self._tag_size]
+        if self._wildcard is not None and self._wildcard in tag and item in self._wild_store:
+            self._wild_store.remove(item)
+            self._length -= 1
+        elif item in self._store[tag]:
+            self._store[tag].remove(item)
+            self._length -= 1
+
+    def find(self, sequence, max_diff):
+        """Find best match for sequence in the store.
+
+        Args:
+            sequence (:obj:`string`): Sequence to search for.
+            max_diff (:obj:`int`): Maximum number of mismatches allowed for a match.
+
+        Returns:
+            :obj:`tuple`: A tuple consisting of the best match found in the store and
+            the number of differences between the returned match and the search string.
+            If no suitable match was found `None` is returned instead.
+        """
+        match = self.search(sequence, max_diff, 1)
+        if len(match) == 0 or match[0][1] > max_diff:
+            return None
+        return match[0]
+
+    def search(self, sequence, max_diff, max_hits=10, raw=False):
+        """Search the sequence store for all approximate matches to a search pattern.
+
+        Args:
+            sequence (:obj:`string`): Sequence to search for.
+            max_hits (:obj:`int`, optional): Maximum number of results to return.
+                set to _None_ to return all candidates. Ignored if `raw` is _True_.
+            raw (:obj:`bool`, optional): Flag indicating whether the raw sequence
+                matches should be returned instead of sequence/distance pairs.
+
+        Returns:
+            If `raw` is _True_ an unordered :obj:`list` of candidates is returned,
+            otherwise a list of (sequence, distance) tuples is returned.
+        """
+        tag = sequence[:self._tag_size]
+        candidates = []
+        if self._wildcard is not None and self._wildcard in tag:
+            if sequence in self._wild_store:
+                if raw:
+                    return [sequence]
+                else:
+                    return [(sequence, 0)]
+            candidates = self._wild_store.search(sequence, max_diff, raw=raw,
+                                                 wildcard=self._wildcard)
+            ## look for matches with all wildcards replaced
+            wilds = [i for (i, letter) in enumerate(tag) if letter == self._wildcard]
+            if max_diff > len(wilds):
+                replacements = iter.product(self._alphabet, repeat=len(wilds))
+                for replace in replacements:
+                    new_seq = list(sequence)
+                    for (i, j) in enumerate(wilds):
+                        new_seq[j] = replace[i]
+                    cand = ''.join(new_seq)
+                    candidates.extend(self.search(cand, max_diff - len(wilds),
+                                                  max_hits=max_hits, raw=raw))
+        else:
+            if sequence in self._store[tag]:
+                if raw:
+                    return [sequence]
+                else:
+                    return [(sequence, 0)]
+            for other_tag in self._store:
+                tag_diff = self._tag_diff[tag][other_tag]
+                if tag_diff <= max_diff:
+                    tag_cand = self._store[other_tag].search(
+                        other_tag + sequence[self._tag_size:],
+                        max_diff - tag_diff, max_hits=max_hits,
+                        raw=raw, wildcard=self._wildcard)
+                    if not raw:
+                        tag_cand = [(seq, diff + tag_diff) for seq, diff in tag_cand]
+                    candidates.extend(tag_cand)
+            if not raw:
+                candidates.sort(key=lambda x: x[1])
+                if max_hits is not None:
+                    candidates = candidates[:max_hits]
+        return candidates
+
+    def __len__(self):
+        return self._length
+
+    def __contains__(self, item):
+        tag = item[:self._tag_size]
+        if self._wildcard and self._wildcard in tag:
+            return item in self._wild_store
+        return item in self._store[tag]
