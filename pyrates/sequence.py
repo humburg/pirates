@@ -304,7 +304,7 @@ class GroupedSequenceStore(object):
             if self._wildcard is not None and self._wildcard in tag:
                 self._wild_store.add(sequence)
             else:
-                self._store[tag].add(sequence, self._wildcard)
+                self._store[tag].add(sequence[self._tag_size:], self._wildcard)
             self._length += 1
 
     def remove(self, item):
@@ -320,7 +320,7 @@ class GroupedSequenceStore(object):
         if self._wildcard is not None and self._wildcard in tag:
             self._wild_store.remove(item)
         else:
-            self._store[tag].remove(item)
+            self._store[tag].remove(item[self._tag_size:])
         self._length -= 1
 
     def discard(self, item):
@@ -329,13 +329,8 @@ class GroupedSequenceStore(object):
         Args:
             item (:obj:`string`): Sequence to be removed.
         """
-        tag = item[:self._tag_size]
-        if self._wildcard is not None and self._wildcard in tag and item in self._wild_store:
-            self._wild_store.remove(item)
-            self._length -= 1
-        elif item in self._store[tag]:
-            self._store[tag].remove(item)
-            self._length -= 1
+        if item in self:
+            self.remove(item)
 
     def find(self, sequence, max_diff):
         """Find best match for sequence in the store.
@@ -369,6 +364,7 @@ class GroupedSequenceStore(object):
             otherwise a list of (sequence, distance) tuples is returned.
         """
         tag = sequence[:self._tag_size]
+        tail = sequence[self._tag_size:]
         candidates = []
         if self._wildcard is not None and self._wildcard in tag:
             if sequence in self._wild_store:
@@ -390,7 +386,7 @@ class GroupedSequenceStore(object):
                     candidates.extend(self.search(cand, max_diff - len(wilds),
                                                   max_hits=max_hits, raw=raw))
         else:
-            if sequence in self._store[tag]:
+            if tail in self._store[tag]:
                 if raw:
                     return [sequence]
                 else:
@@ -399,11 +395,12 @@ class GroupedSequenceStore(object):
                 tag_diff = self._tag_diff[tag][other_tag]
                 if tag_diff <= max_diff:
                     tag_cand = self._store[other_tag].search(
-                        other_tag + sequence[self._tag_size:],
-                        max_diff - tag_diff, max_hits=max_hits,
+                        tail, max_diff - tag_diff, max_hits=max_hits,
                         raw=raw, wildcard=self._wildcard)
                     if not raw:
-                        tag_cand = [(seq, diff + tag_diff) for seq, diff in tag_cand]
+                        tag_cand = [(other_tag + seq, diff + tag_diff) for seq, diff in tag_cand]
+                    else:
+                        tag_cand = [other_tag + seq for seq in tag_cand]
                     candidates.extend(tag_cand)
             if not raw:
                 candidates.sort(key=lambda x: x[1])
@@ -418,4 +415,4 @@ class GroupedSequenceStore(object):
         tag = item[:self._tag_size]
         if self._wildcard and self._wildcard in tag:
             return item in self._wild_store
-        return item in self._store[tag]
+        return item[self._tag_size:] in self._store[tag]
