@@ -1,7 +1,7 @@
 """Classes and functions to handle sequence data.
 """
 import pyrates.utils as utils
-import itertools as iter
+import itertools as itools
 
 class SequenceWithQuality(object):
     """A sequence and its quality scores.
@@ -269,7 +269,7 @@ class GroupedSequenceStore(object):
         self._alphabet = alphabet
         self._tag_size = tag_size
         self._store = {''.join(tag):SequenceStore(max_length, alphabet) for
-                       tag in iter.product(alphabet, repeat=tag_size)}
+                       tag in itools.product(alphabet, repeat=tag_size)}
         self._tag_diff = {tag:{other:SequenceStore.diff(tag, other) for
                                other in self._store} for tag in self._store}
         self._wild_store = SequenceStore(max_length, alphabet)
@@ -377,7 +377,7 @@ class GroupedSequenceStore(object):
             ## look for matches with all wildcards replaced
             wilds = [i for (i, letter) in enumerate(tag) if letter == self._wildcard]
             if max_diff > len(wilds):
-                replacements = iter.product(self._alphabet, repeat=len(wilds))
+                replacements = itools.product(self._alphabet, repeat=len(wilds))
                 for replace in replacements:
                     new_seq = list(sequence)
                     for (i, j) in enumerate(wilds):
