@@ -72,7 +72,6 @@ class Clustering(object):
             self.clusters[nameid] = cons.Consensus(uid, read_seq)
             self._store.add(nameid)
         else:
-            similar_id = similar_id
             id_map[nameid] = similar_id
         return similar_id
 
