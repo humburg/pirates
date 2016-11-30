@@ -300,7 +300,7 @@ class GroupedSequenceStore(object):
             sequence (:obj:`string`): New sequence to be added.
         """
         tag = sequence[:self._tag_size]
-        if tag not in self:
+        if sequence not in self:
             if self._wildcard is not None and self._wildcard in tag:
                 self._wild_store.add(sequence)
             else:
