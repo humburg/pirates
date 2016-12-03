@@ -40,7 +40,9 @@ class Clustering(object):
                       len(self[cand].sequence) == len(read_seq)]
         candidates = [cand for cand in candidates if
                       not self[cand].sequence.grosslydifferent(read_seq)]
-        candidates = [(cand, pseq.SequenceStore.diff(cand, pattern)) for cand in candidates]
+        candidates = [(cand, pseq.SequenceStore.diff(cand, pattern)) for
+                      cand in candidates]
+        candidates = [cand for cand in candidates if cand[1] <= threshold]
         return candidates
 
     def merge_target(self, uid, read_seq, id_map, threshold):
@@ -57,14 +59,11 @@ class Clustering(object):
                 if no valid match was found.
         """
         nameid = uid.sequence
-        id_cands = self._store.search(nameid, max_diff=threshold, raw=True)
-        id_cands = self._filter(nameid, id_cands, read_seq)
+        id_cands = self._store.search(nameid, max_diff=threshold, max_hits=100, raw=True)
+        id_cands = self._filter(nameid, id_cands, read_seq, threshold)
         if id_cands:
             similar_id = min(id_cands, key=lambda x: x[1])
-            if not similar_id or similar_id[1] > threshold:
-                similar_id = None
-            else:
-                similar_id = similar_id[0]
+            similar_id = similar_id[0]
         else:
             similar_id = None
         ## Create new cluster or merge with existing consensus
@@ -89,8 +88,10 @@ class Clustering(object):
         """
         total_skipped = 0
         total_merged = 0
+        total_fixed = 0
+        single_count = 0
 
-        id_set = pseq.GroupedSequenceStore(id_length*2, tag_size=threshold, wildcard='N')
+        id_set = pseq.GroupedSequenceStore(id_length*2, tag_size=5, wildcard='N')
         id_map = {}
         seq = cls({}, id_set)
 
@@ -107,13 +108,19 @@ class Clustering(object):
                     total_time = checkpoint - start_time
                     batch_time = checkpoint - batch_start
                     batch_start = checkpoint
-                    cls._logger.debug("reads: %d clusters: %d merged: %d skipped: %d",
-                                      line_count/4, len(seq), total_merged, total_skipped)
+                    cls._logger.debug("reads: %d clusters: %d merged: %0.1f%% skipped: %d",
+                                      line_count/4, len(seq),
+                                      total_merged/(line_count/4.0), total_skipped)
+                    cls._logger.debug("singletons: %d (%.1f%%), rescued %d (%.1f%%), " +
+                                      "failures: %d (%.2f%%)",
+                                      single_count, single_count/(len(seq)/100.0),
+                                      total_fixed, total_fixed/(line_count/4.0)*100,
+                                      seq.fail_count,
+                                      seq.fail_count/(line_count/4.0)*100)
                     cls._logger.debug("total time: %s, increment: %s, rate: %.1f reads/s",
                                       datetime.timedelta(seconds=total_time),
                                       datetime.timedelta(seconds=batch_time),
                                       line_count/4/total_time)
-                    cls._logger.debug("fragmentation: %.2f%%", total_merged/(line_count/4.0)*100)
                 elif (line_count % 4) == 1:
                     line = line.rstrip("\n")
                     nameid = line[0:id_length] + line[-id_length:]
@@ -129,18 +136,24 @@ class Clustering(object):
                     similar_id = None
                     if nameid in id_map:
                         similar_id = id_map[nameid]
+                        total_fixed += 1
                     elif nameid not in seq:
                         similar_id = seq.merge_target(uid, read_seq, id_map, threshold)
+                        if similar_id is not None:
+                            total_fixed += 1
                     else:
                         similar_id = nameid
                     if similar_id is not None:
                         success = seq[similar_id].update(uid, read_seq)
                         if success:
                             total_merged += 1
+                            if seq[similar_id].size == 2:
+                                single_count -= 1
                         else:
                             total_skipped += 1
                     else:
                         seq.add(uid, read_seq)
+                        single_count += 1
         return seq
 
     def write(self, output_file):
@@ -192,6 +205,20 @@ class Clustering(object):
         nameid = uid.sequence
         self.clusters[nameid] = cons.Consensus(uid, sequence)
         self._store.add(nameid)
+
+    def cluster_fails(self):
+        """Sequences that were not assigned to any cluster.
+
+        Returns:
+            :obj:`dict`: UID / sequence pairs
+        """
+        return {key:self.clusters[key] for key in self._store.wild_tags}
+
+    @property
+    def fail_count(self):
+        """Number of sequences that were not assigned to any cluster.
+        """
+        return len(self._store.wild_tags)
 
     def __contains__(self, item):
         return item in self.clusters

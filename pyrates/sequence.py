@@ -248,6 +248,10 @@ class SequenceStore(object):
     def __contains__(self, item):
         return item in self._index
 
+    def __iter__(self):
+        for key in self._index:
+            yield key
+
 class GroupedSequenceStore(object):
     """Store a collection of sequences.
 
@@ -372,19 +376,8 @@ class GroupedSequenceStore(object):
                     return [sequence]
                 else:
                     return [(sequence, 0)]
-            candidates = self._wild_store.search(sequence, max_diff, raw=raw,
-                                                 wildcard=self._wildcard)
-            ## look for matches with all wildcards replaced
-            wilds = [i for (i, letter) in enumerate(tag) if letter == self._wildcard]
-            if max_diff > len(wilds):
-                replacements = itools.product(self._alphabet, repeat=len(wilds))
-                for replace in replacements:
-                    new_seq = list(sequence)
-                    for (i, j) in enumerate(wilds):
-                        new_seq[j] = replace[i]
-                    cand = ''.join(new_seq)
-                    candidates.extend(self.search(cand, max_diff - len(wilds),
-                                                  max_hits=max_hits, raw=raw))
+            else:
+                return []
         else:
             if tail in self._store[tag]:
                 if raw:
@@ -406,7 +399,13 @@ class GroupedSequenceStore(object):
                 candidates.sort(key=lambda x: x[1])
                 if max_hits is not None:
                     candidates = candidates[:max_hits]
-        return candidates
+        return list(set(candidates))
+
+    @property
+    def wild_tags(self):
+        """All sequences with wildcards in their tags.
+        """
+        return self._wild_store
 
     def __len__(self):
         return self._length

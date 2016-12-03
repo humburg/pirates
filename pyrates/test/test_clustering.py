@@ -111,7 +111,7 @@ def test_fastq_missing():
            "%r != %r" % (cluster[uid1_expect].sequence.sequence, seq1_expect)
     assert cluster[uid2_expect].sequence.sequence == seq2_expect, \
            "%r != %r" % (cluster[uid2_expect].sequence.sequence, seq2_expect)
-    assert cluster[uid1_expect].size == 4, "%r != %r" % (cluster[uid1_expect].size, 4)
+    assert cluster[uid1_expect].size == 3, "%r != %r" % (cluster[uid1_expect].size, 3)
     assert cluster[uid2_expect].size == 5, "%r != %r" % (cluster[uid2_expect].size, 5)
     assert cluster[uid3_expect].size == 1, "%r != %r" % (cluster[uid2_expect].size, 1)
 
