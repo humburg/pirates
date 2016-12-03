@@ -54,7 +54,7 @@ def main():
     )
     parser.add_argument(
         '--id-tolerance',
-        default=5,
+        default=5, type=int,
         help='Maximum number of differences between IDs allowed to consider merging of clusters.'
     )
     parser.add_argument(
@@ -84,7 +84,7 @@ def main():
 
     ## start consensus computation
     started_at = time.time()
-    seq = clust.Clustering.from_fastq(args.fastq, args.id_length, args.adapter)
+    seq = clust.Clustering.from_fastq(args.fastq, args.id_length, args.adapter, args.id_tolerance)
 
     if logger.isEnabledFor(logging.INFO):
         total_different = 0
@@ -102,6 +102,8 @@ def main():
                     total_shorter)
         logger.info("Number of sequences that were longer then consensus sequence %d",
                     total_longer)
+        logger.info("Number of sequences with ambiguous label %d (%.2f%%)",
+                    seq.fail_count(), seq.fail_count()/len(seq)*100)
     logger.info('Total time taken: %s', str(datetime.timedelta(seconds=time.time() - started_at)))
     mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
     logger.info('Memory used: %.2f MB', mem)
