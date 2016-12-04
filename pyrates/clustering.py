@@ -35,7 +35,7 @@ class Clustering(object):
             self._store = pseq.GroupedSequenceStore.from_list(list(centres.keys()),
                                                               wildcard=wildcard)
 
-    def _filter(self, pattern, candidates, read_seq):
+    def _filter(self, pattern, candidates, read_seq, threshold):
         candidates = [cand for cand in candidates if
                       len(self[cand].sequence) == len(read_seq)]
         candidates = [cand for cand in candidates if
