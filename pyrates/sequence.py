@@ -261,21 +261,28 @@ class GroupedSequenceStore(object):
 
     Args:
         max_length (:obj:`int`): Maximum sequence length supported by this store.
-        alphabet (:obj:`tuple`): A list of all valid sequence characters.
-        tag_size (:obj:`int`): Length of prefix to use for grouping of reads.
-        wildcard (:obj:`string`): Character that should be treated as wildcard.
+        alphabet (:obj:`tuple`, optional): A list of all valid sequence characters.
+        tag_size (:obj:`int`, optional): Length of prefix to use for grouping of reads.
+        max_diff (:obj:`int`, optional): Maximum number of mismatches allowed.
+        wildcard (:obj:`string`, optional): Character that should be treated as wildcard.
     """
     __slots__ = '_alphabet', '_store', '_wild_store', '_wildcard', '_tag_size', '_tag_diff', \
-                '_length'
+                '_length', '_max_diff'
     _logger = utils.get_logger(__name__)
 
-    def __init__(self, max_length, alphabet=('A', 'C', 'G', 'T'), tag_size=4, wildcard=None):
+    def __init__(self, max_length, alphabet=('A', 'C', 'G', 'T'),
+                 tag_size=4, max_diff=4, wildcard=None):
         self._alphabet = alphabet
         self._tag_size = tag_size
         self._store = {''.join(tag):SequenceStore(max_length, alphabet) for
                        tag in itools.product(alphabet, repeat=tag_size)}
-        self._tag_diff = {tag:{other:SequenceStore.diff(tag, other) for
-                               other in self._store} for tag in self._store}
+        self._max_diff = max_diff
+        self._tag_diff = {tag:{} for tag in self._store}
+        for tag in self._store:
+            for other_tag in self._store:
+                diff = SequenceStore.diff(tag, other_tag)
+                if diff <= max_diff:
+                    self._tag_diff[tag][other_tag] = diff
         self._wild_store = SequenceStore(max_length, alphabet)
         self._wildcard = wildcard
         self._length = 0
@@ -336,24 +343,23 @@ class GroupedSequenceStore(object):
         if item in self:
             self.remove(item)
 
-    def find(self, sequence, max_diff):
+    def find(self, sequence):
         """Find best match for sequence in the store.
 
         Args:
             sequence (:obj:`string`): Sequence to search for.
-            max_diff (:obj:`int`): Maximum number of mismatches allowed for a match.
 
         Returns:
             :obj:`tuple`: A tuple consisting of the best match found in the store and
             the number of differences between the returned match and the search string.
             If no suitable match was found `None` is returned instead.
         """
-        match = self.search(sequence, max_diff, 1)
-        if len(match) == 0 or match[0][1] > max_diff:
+        match = self.search(sequence, 1)
+        if len(match) == 0 or match[0][1] > self._max_diff:
             return None
         return match[0]
 
-    def search(self, sequence, max_diff, max_hits=10, raw=False):
+    def search(self, sequence, max_hits=10, raw=False):
         """Search the sequence store for all approximate matches to a search pattern.
 
         Args:
@@ -384,17 +390,16 @@ class GroupedSequenceStore(object):
                     return [sequence]
                 else:
                     return [(sequence, 0)]
-            for other_tag in self._store:
+            for other_tag in self._tag_diff[tag]:
                 tag_diff = self._tag_diff[tag][other_tag]
-                if tag_diff <= max_diff:
-                    tag_cand = self._store[other_tag].search(
-                        tail, max_diff - tag_diff, max_hits=max_hits,
-                        raw=raw, wildcard=self._wildcard)
-                    if not raw:
-                        tag_cand = [(other_tag + seq, diff + tag_diff) for seq, diff in tag_cand]
-                    else:
-                        tag_cand = [other_tag + seq for seq in tag_cand]
-                    candidates.extend(tag_cand)
+                tag_cand = self._store[other_tag].search(
+                    tail, self._max_diff - tag_diff, max_hits=max_hits,
+                    raw=raw, wildcard=self._wildcard)
+                if not raw:
+                    tag_cand = [(other_tag + seq, diff + tag_diff) for seq, diff in tag_cand]
+                else:
+                    tag_cand = [other_tag + seq for seq in tag_cand]
+                candidates.extend(tag_cand)
             if not raw:
                 candidates.sort(key=lambda x: x[1])
                 if max_hits is not None:

@@ -250,34 +250,33 @@ def test_grouped_discard():
     assert "CTGT" not in store, "'CTGT' remains in store after removal"
     assert len(store) == 0, "%r != 0" % len(store)
 
-def test_grouped_search():
+@params((4, 2), (2, 2))
+def test_grouped_search(max_diff, expect_hits):
     """Find all approximate matches"""
-    store = GroupedSequenceStore(4, tag_size=2)
+    store = GroupedSequenceStore(4, max_diff=max_diff, tag_size=2)
     store.add("AAAA")
     store.add("AAAT")
     store.add("AATT")
     store.add("ATTT")
-    match = store.search('TTTT', 4, max_hits=None)
-    assert len(match) == 2, "%r != 2 (found %r)" % (len(match), match)
-    match = store.search('TTTT', 2, max_hits=None)
-    assert len(match) == 2, "%r != 2 (found %r)" % (len(match), match)
+    match = store.search('TTTT', max_hits=None)
+    assert len(match) == expect_hits, "%r != %r (found %r)" % (len(match), expect_hits, match)
 
 @params(('AAAA', ('AAAA', 0)), ('CATT', ('AATT', 1)), ('GGGG', None))
 def test_grouped_find(search, expect):
     """Find best approximate match"""
-    store = GroupedSequenceStore(4, tag_size=2)
+    store = GroupedSequenceStore(4, max_diff=2, tag_size=2)
     store.add("AAAA")
     store.add("AATT")
     store.add("TTTT")
-    match = store.find(search, 2)
+    match = store.find(search)
     assert match == expect, "%r != %r" % (match, expect)
 
 @params(('AANA', ('AAAA', 1)), ('CATT', ('AATT', 1)), ('NGGG', None))
 def test_grouped_find_wild(search, expect):
     """Find best approximate match"""
-    store = GroupedSequenceStore(4, tag_size=2, wildcard='N')
+    store = GroupedSequenceStore(4, max_diff=2, tag_size=2, wildcard='N')
     store.add("AAAA")
     store.add("AATT")
     store.add("TTTT")
-    match = store.find(search, 2)
+    match = store.find(search)
     assert match == expect, "%r != %r" % (match, expect)

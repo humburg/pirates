@@ -59,7 +59,7 @@ class Clustering(object):
                 if no valid match was found.
         """
         nameid = uid.sequence
-        id_cands = self._store.search(nameid, max_diff=threshold, max_hits=100, raw=True)
+        id_cands = self._store.search(nameid, max_hits=100, raw=True)
         id_cands = self._filter(nameid, id_cands, read_seq, threshold)
         if id_cands:
             similar_id = min(id_cands, key=lambda x: x[1])
@@ -91,7 +91,8 @@ class Clustering(object):
         total_fixed = 0
         single_count = 0
 
-        id_set = pseq.GroupedSequenceStore(id_length*2, tag_size=5, wildcard='N')
+        id_set = pseq.GroupedSequenceStore(id_length*2, tag_size=5, max_diff=threshold,
+                                           wildcard='N')
         id_map = {}
         seq = cls({}, id_set)
 
