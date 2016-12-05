@@ -36,24 +36,20 @@ def main():
         help='Length of unique identifier at start of read.'
     )
     parser.add_argument(
+        '--prefix-length', '-p',
+        metavar='PREFIX',
+        default=5, type=int,
+        help="Length of UID prefix to use in read clustering. Larger values may speed up" +
+        " the clustering but will require more memory."
+    )
+    parser.add_argument(
         '--adapter', '-a',
         default='GACT',
         help='Constant part of barcode adapter. This is expected to be located' +
         ' between the UID and the actual read sequence.'
     )
     parser.add_argument(
-        '--merge-size', '-m',
-        default=3,
-        help='Attempt to merge clusters no larger than this into larger clusters.'
-    )
-    parser.add_argument(
-        '--merge-target',
-        default=10,
-        help='Maximum size for clusters to be considered as a target for the merging' +
-        ' of smaller clusters.'
-    )
-    parser.add_argument(
-        '--id-tolerance',
+        '--id-tolerance', '-t',
         default=5, type=int,
         help='Maximum number of differences between IDs allowed to consider merging of clusters.'
     )
@@ -72,19 +68,26 @@ def main():
 
     ## configure logging
     logger = utils.get_logger('pyrates', args.log, [utils.console_handler()])
-    logger.info('This is pyrates ' + __version__)
-    logger.debug('At revision ' + get_versions()['full-revisionid'])
-    logger.info('Processing input file ' + args.fastq)
-    if args.merge_size and args.merge_target:
-        logger.info("Will merge clusters smaller than %d into clusters no larger than than %d",
-                    args.merge_size, args.merge_target)
-    else:
-        logger.warning("Merging of small clusters is disabled.")
-    logger.info('Consensus sequences will go to ' + args.output)
+
+    ## Add parameter values and version info to log
+    logger.info('This is pyrates %s', __version__)
+    logger.debug('At revision %s', get_versions()['full-revisionid'])
+    logger.info('Processing input file %r', args.fastq)
+    logger.info('Consensus sequences will go to %r', args.output)
+    logger.info('UID length: %d', args.id_length)
+    logger.info('Maximum number of mismatches in UID allowed within cluster: %d', args.id_tolerance)
+    logger.info('Length of UID prefix used in clustering: %d', args.prefix_length)
+    if args.prefix_length <= args.id_tolerance:
+        logger.info('To reduce running time choose a prefix longer than the allowed number' +
+                    ' of UID mismatches')
+    logger.info('Adapter sequence: %r', args.adapter)
+
 
     ## start consensus computation
     started_at = time.time()
-    seq = clust.Clustering.from_fastq(args.fastq, args.id_length, args.adapter, args.id_tolerance)
+    seq = clust.Clustering.from_fastq(input_file=args.fastq, id_length=args.id_length,
+                                      adapter=args.adapter, threshold=args.id_tolerance,
+                                      prefix=args.prefix_length)
 
     if logger.isEnabledFor(logging.INFO):
         total_different = 0
