@@ -75,7 +75,7 @@ class Clustering(object):
         return similar_id
 
     @classmethod
-    def from_fastq(cls, input_file, id_length, adapter, threshold=5):
+    def from_fastq(cls, input_file, id_length, adapter, threshold=5, prefix=5):
         """Read FASTQ file to generate consensus sequences.
 
         Args:
@@ -91,7 +91,7 @@ class Clustering(object):
         total_fixed = 0
         single_count = 0
 
-        id_set = pseq.GroupedSequenceStore(id_length*2, tag_size=5, max_diff=threshold,
+        id_set = pseq.GroupedSequenceStore(id_length*2, tag_size=prefix, max_diff=threshold,
                                            wildcard='N')
         id_map = {}
         seq = cls({}, id_set)
