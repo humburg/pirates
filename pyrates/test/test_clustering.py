@@ -80,7 +80,26 @@ def test_merge_targets():
 @with_teardown(teardown_fastq_simple)
 def test_fastq_simple():
     """Create consensus from fastq file."""
-    cluster = clust.Clustering.from_fastq(TMP + 'simple.fastq', 4, 'ACGT', threshold=0)
+    cluster = clust.Clustering.from_fastq(TMP + 'simple.fastq', 4, 'ACGT',
+                                          threshold=0, prefix=1)
+    uid1_expect = 'AAAACCCC'
+    uid2_expect = 'CCCCAAAA'
+    seq1_expect = 'ACCTCTCCCTGTGGGTCATGTGACT'
+    seq2_expect = 'TTGTTTGAAAAACCTCGAAAGTAAC'
+
+    assert uid1_expect in cluster, "%r not in %r" % (uid1_expect, list(cluster.keys()))
+    assert uid2_expect in cluster, "%r not in %r" % (uid2_expect, list(cluster.keys()))
+    assert cluster[uid1_expect].sequence.sequence == seq1_expect, \
+           "%r != %r" % (cluster[uid1_expect].sequence.sequence, seq1_expect)
+    assert cluster[uid2_expect].sequence.sequence == seq2_expect, \
+           "%r != %r" % (cluster[uid2_expect].sequence.sequence, seq2_expect)
+
+@with_setup(setup_fastq_simple)
+@with_teardown(teardown_fastq_simple)
+def test_fastq_no_prefix():
+    """Create consensus from fastq file."""
+    cluster = clust.Clustering.from_fastq(TMP + 'simple.fastq', 4, 'ACGT',
+                                          threshold=0, prefix=0)
     uid1_expect = 'AAAACCCC'
     uid2_expect = 'CCCCAAAA'
     seq1_expect = 'ACCTCTCCCTGTGGGTCATGTGACT'
@@ -97,7 +116,8 @@ def test_fastq_simple():
 @with_teardown(teardown_fastq_missing)
 def test_fastq_missing():
     """Create consensus from fastq file."""
-    cluster = clust.Clustering.from_fastq(TMP + 'missing.fastq', 4, 'ACGT', threshold=2)
+    cluster = clust.Clustering.from_fastq(TMP + 'missing.fastq', 4, 'ACGT',
+                                          threshold=2, prefix=1)
     uid1_expect = 'AAAACCCC'
     uid2_expect = 'CCCCAAAA'
     uid3_expect = 'AANAAAAA'
@@ -111,7 +131,7 @@ def test_fastq_missing():
            "%r != %r" % (cluster[uid1_expect].sequence.sequence, seq1_expect)
     assert cluster[uid2_expect].sequence.sequence == seq2_expect, \
            "%r != %r" % (cluster[uid2_expect].sequence.sequence, seq2_expect)
-    assert cluster[uid1_expect].size == 3, "%r != %r" % (cluster[uid1_expect].size, 3)
+    assert cluster[uid1_expect].size == 4, "%r != %r" % (cluster[uid1_expect].size, 4)
     assert cluster[uid2_expect].size == 5, "%r != %r" % (cluster[uid2_expect].size, 5)
     assert cluster[uid3_expect].size == 1, "%r != %r" % (cluster[uid2_expect].size, 1)
 
@@ -119,7 +139,8 @@ def test_fastq_missing():
 @with_teardown(teardown_fastq_map)
 def test_fastq_map():
     """Create consensus from fastq file."""
-    cluster = clust.Clustering.from_fastq(TMP + 'map.fastq', 4, 'ACGT', threshold=2)
+    cluster = clust.Clustering.from_fastq(TMP + 'map.fastq', 4, 'ACGT',
+                                          threshold=2, prefix=1)
     uid1_expect = 'AAAACCCC'
     uid2_expect = 'CCCCAAAA'
     seq1_expect = 'ACCTCTCCCTGTGGGTCATGTGACT'
@@ -142,7 +163,7 @@ def test_fastq_mismatch():
     cluster = clust.Clustering.from_fastq(TMP + 'mismatch.fastq',
                                           id_length=4,
                                           adapter='ACGT',
-                                          threshold=0)
+                                          threshold=0, prefix=1)
     uid1_expect = 'AAAACCCC'
     uid2_expect = 'CCCCAAAA'
     uid3_expect = 'AAAAAAAA'

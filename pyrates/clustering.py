@@ -27,13 +27,20 @@ class Clustering(object):
     __slots__ = 'clusters', '_store'
     _logger = utils.get_logger(__name__)
 
-    def __init__(self, centres, store=None, wildcard=None):
+    def __init__(self, centres, store=None, wildcard=None,
+                 alphabet=('A', 'C', 'G', 'T'), tag_size=5, max_diff=3):
         self.clusters = centres
         if store is not None:
             self._store = store
-        else:
+        elif tag_size > 0:
             self._store = pseq.GroupedSequenceStore.from_list(list(centres.keys()),
+                                                              alphabet=alphabet,
+                                                              tag_size=tag_size,
+                                                              max_diff=max_diff,
                                                               wildcard=wildcard)
+        else:
+            self._store = pseq.SequenceStore.from_list(list(centres.keys()),
+                                                       alphabet=alphabet)
 
     def _filter(self, pattern, candidates, read_seq, threshold):
         candidates = [cand for cand in candidates if
