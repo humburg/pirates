@@ -7,3 +7,4 @@ docker/requirements.txt
 .coverage
 tmp/*
 pyrates.prof
+pyrates.lprof
