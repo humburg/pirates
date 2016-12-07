@@ -88,7 +88,7 @@ def main():
     seq = clust.Clustering.from_fastq(input_file=args.fastq, id_length=args.id_length,
                                       adapter=args.adapter, threshold=args.id_tolerance,
                                       prefix=args.prefix_length)
-    seq.write(args.output_file)
+    seq.write(args.output)
     if logger.isEnabledFor(logging.INFO):
         total_different = 0
         total_shorter = 0
