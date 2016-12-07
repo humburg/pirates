@@ -125,13 +125,13 @@ def test_consensus_str():
     seq1 = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC", "IIIDIIIIIIIIIII", name='test')
     seq2 = sequence.SequenceWithQuality("ACTTTTTGTCTTAGC", "IIIIIIIIIDIDIII", name='test')
     consensus = cons.Consensus(id1, seq1)
-    expect_str1 = "@test:AAAA:1:0:0:0\nAAAAACTGTTTGTCTAAGC\n+\nIIIIIIIDIIIIIIIIIII"
+    expect_str1 = "@test:AAAA:IIII:1:0:0:0\nACTGTTTGTCTAAGC\n+\nIIIDIIIIIIIIIII"
     expect_repr1 = "Consensus(uid=SequenceWithQuality(sequence='AAAA', " + \
                                                      "quality='IIII', name=''), " + \
                    "sequence=SequenceWithQuality(sequence='ACTGTTTGTCTAAGC', " + \
                                                 "quality='IIIDIIIIIIIIIII', name='test'), " + \
                    "diffs={}, size=1)"
-    expect_str2 = "@test:AAAA:2:0:0:0\nAAAAACTTTTTGTCTAAGC\n+4G1T1 12A1T1\nIIIIIIIIIIIIIIIIIII"
+    expect_str2 = "@test:AAAA:IIII:2:0:0:0\nACTTTTTGTCTAAGC\n+4G1T1 12A1T1\nIIIIIIIIIIIIIII"
 
     assert str(consensus) == expect_str1, "\n%s\n!=\n%s" % (consensus, expect_str1)
     assert repr(consensus) == expect_repr1, "\n%r\n!=\n%r" % (consensus, expect_repr1)
