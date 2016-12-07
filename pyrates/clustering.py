@@ -4,7 +4,7 @@
 import logging
 import time
 import datetime
-
+import os.path
 import pyrates.utils as utils
 import pyrates.sequence as pseq
 import pyrates.consensus as cons
@@ -97,7 +97,7 @@ class Clustering(object):
         total_merged = 0
         total_fixed = 0
         single_count = 0
-        name = input_file.split('.')[0]
+        name = os.path.basename(input_file).split('.')[0]
 
         id_set = pseq.GroupedSequenceStore(id_length*2, tag_size=prefix, max_diff=threshold,
                                            wildcard='N')
