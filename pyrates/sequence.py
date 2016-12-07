@@ -1,7 +1,8 @@
 """Classes and functions to handle sequence data.
 """
-import pyrates.utils as utils
 import itertools as itools
+
+import pyrates.utils as utils
 
 class SequenceWithQuality(object):
     """A sequence and its quality scores.
