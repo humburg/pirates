@@ -97,6 +97,7 @@ class Clustering(object):
         total_merged = 0
         total_fixed = 0
         single_count = 0
+        name = input_file.split('.')[0]
 
         id_set = pseq.GroupedSequenceStore(id_length*2, tag_size=prefix, max_diff=threshold,
                                            wildcard='N')
@@ -139,7 +140,7 @@ class Clustering(object):
                     qsequence = line[adapt_length:-adapt_length]
 
                     uid = pseq.SequenceWithQuality(nameid, qnameid)
-                    read_seq = pseq.SequenceWithQuality(sequence, qsequence)
+                    read_seq = pseq.SequenceWithQuality(sequence, qsequence, name=name)
                     ## Look for similar IDs that may be candidates for merging
                     similar_id = None
                     if nameid in id_map:

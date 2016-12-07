@@ -199,9 +199,12 @@ class Consensus(object):
                 pos_diff += nuc + str(self.diffs[pos][nuc])
             diff_str.append(pos_diff)
         diff_str = ' '.join(diff_str)
-        return "@%d\n%s%s\n+%s\n%s%s" % (self.size, self.uid.sequence,
-                                         self.sequence.sequence, diff_str,
-                                         self.uid.quality, self.sequence.quality)
+        return "@%s:%s:%d:%d:%d:%d\n%s%s\n+%s\n%s%s" % (self.sequence.name,
+                                                        self.uid.sequence, self.size,
+                                                        self.shorter, self.longer, self.different,
+                                                        self.uid.sequence,
+                                                        self.sequence.sequence, diff_str,
+                                                        self.uid.quality, self.sequence.quality)
 
     def __repr__(self):
         return "Consensus(uid=%r, sequence=%r, diffs=%r, size=%r)" % \
