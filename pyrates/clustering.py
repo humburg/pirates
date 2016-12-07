@@ -4,7 +4,7 @@
 import logging
 import time
 import datetime
-from collections import defaultdict
+
 import pyrates.utils as utils
 import pyrates.sequence as pseq
 import pyrates.consensus as cons
