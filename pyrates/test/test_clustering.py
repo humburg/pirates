@@ -46,10 +46,10 @@ def test_merge_diff(idx):
     for i in range(1, len(clusters)):
         success = merged.merge(centres[i], 2)
         assert success
-    expect = "@12 7G5T7 9A1C9G2"
+    expect = "+8G5T7 10A1C9G2"
     obs = str(merged).splitlines()
     assert merged.size == 12, "%r != %r" % (merged.size, 12)
-    assert obs[0] == expect, "%r != %r" % (obs[0], expect)
+    assert obs[2] == expect, "%r != %r" % (obs[2], expect)
 
 def test_merge_targets():
     """Identify cluster for merging"""

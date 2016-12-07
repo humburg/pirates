@@ -131,7 +131,7 @@ def test_consensus_str():
                    "sequence=SequenceWithQuality(sequence='ACTGTTTGTCTAAGC', " + \
                                                 "quality='IIIDIIIIIIIIIII', name=''), " + \
                    "diffs={}, size=1)"
-    expect_str2 = "@2 3G1T1 11A1T1\nAAAAACTTTTTGTCTAAGC\n+\nIIIIIIIIIIIIIIIIIII"
+    expect_str2 = "@2\nAAAAACTTTTTGTCTAAGC\n+4G1T1 12A1T1\nIIIIIIIIIIIIIIIIIII"
 
     assert str(consensus) == expect_str1, "\n%s\n!=\n%s" % (consensus, expect_str1)
     assert repr(consensus) == expect_repr1, "\n%r\n!=\n%r" % (consensus, expect_repr1)
