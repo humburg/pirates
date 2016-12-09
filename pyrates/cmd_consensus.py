@@ -88,7 +88,7 @@ def main():
     seq = clust.Clustering.from_fastq(input_file=args.fastq, id_length=args.id_length,
                                       adapter=args.adapter, threshold=args.id_tolerance,
                                       prefix=args.prefix_length)
-
+    seq.write(args.output)
     if logger.isEnabledFor(logging.INFO):
         total_different = 0
         total_shorter = 0
@@ -106,7 +106,7 @@ def main():
         logger.info("Number of sequences that were longer then consensus sequence %d",
                     total_longer)
         logger.info("Number of sequences with ambiguous label %d (%.2f%%)",
-                    seq.fail_count(), seq.fail_count()/len(seq)*100)
+                    seq.fail_count, seq.fail_count/float(len(seq))*100)
     logger.info('Total time taken: %s', str(datetime.timedelta(seconds=time.time() - started_at)))
     mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
     logger.info('Memory used: %.2f MB', mem)
