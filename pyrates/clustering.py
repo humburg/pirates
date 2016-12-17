@@ -117,15 +117,18 @@ class Clustering(object):
                     total_time = checkpoint - start_time
                     batch_time = checkpoint - batch_start
                     batch_start = checkpoint
-                    cls._logger.debug("reads: %d, clusters: %d, merged: %0.1f%%, skipped: %d",
-                                      line_count/4, len(seq),
-                                      total_merged/(line_count/4.0), total_skipped)
-                    cls._logger.debug("singletons: %d (%.1f%%), rescued: %d (%.1f%%), " +
-                                      "failures: %d (%.2f%%)",
-                                      single_count, single_count/(len(seq)/100.0),
-                                      total_fixed, total_fixed/(line_count/4.0)*100,
+                    cls._logger.debug("reads: %d, clusters: %d, singletons: %d (%.1f%%), " +
+                                      "ambiguous UIDs: %d (%.2f%%)",
+                                      line_count/4, len(seq), single_count,
+                                      single_count/(len(seq)/100.0),
                                       seq.fail_count,
                                       seq.fail_count/(line_count/4.0)*100)
+                    cls._logger.debug("similar UIDs: %d (%.1f%%), UIDs merged: %d (%.1f%%)" +
+                                      "merge failures: %d (%.1f%%)",
+                                      total_fixed, total_fixed/(line_count/4.0)*100,
+                                      total_merged,
+                                      total_merged/(line_count/4.0)*100,
+                                      total_skipped, total_skipped/(line_count/4.0)*100)
                     cls._logger.debug("total time: %s, increment: %s, rate: %.1f reads/s",
                                       datetime.timedelta(seconds=total_time),
                                       datetime.timedelta(seconds=batch_time),
