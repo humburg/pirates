@@ -132,7 +132,7 @@ class Clustering(object):
                     cls._logger.debug("total time: %s, increment: %s, rate: %.1f reads/s",
                                       datetime.timedelta(seconds=total_time),
                                       datetime.timedelta(seconds=batch_time),
-                                      line_count/4/total_time)
+                                      line_count/4.0/total_time)
                 elif (line_count % 4) == 1:
                     line = line.rstrip("\n")
                     nameid = line[0:id_length] + line[-id_length:]
