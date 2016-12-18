@@ -122,6 +122,7 @@ class Clustering(object):
         seq = cls({}, id_set, read_length=read_length)
 
         open_fun = utils.smart_open(input_file)
+        line_count = 0
         with open_fun(input_file) as fastq:
             for (line_count, line) in enumerate(fastq):
                 # print out some stats as we go
@@ -166,6 +167,8 @@ class Clustering(object):
                     else:
                         seq.add(uid, read_seq)
                         seq.stats['single_count'][is_long] += 1
+        if cls._logger.isEnabledFor(logging.DEBUG) and line_count > 0:
+            seq.log_progress(line_count)
         return seq
 
     def log_progress(self, line_count):
