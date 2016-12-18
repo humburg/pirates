@@ -63,7 +63,8 @@ class Consensus(object):
                 qual_update[i] = qual_other
         self.uid.quality = ''.join(qual_update)
 
-    def update(self, uid_other, seq_other, size_other=1, diffs_other=None, discard=True):
+    def update(self, uid_other, seq_other, size_other=1, diffs_other=None, discard=True,
+               max_dist=0.02):
         """Update consensus sequence.
 
         The read represented by `seq_other` is added to the consensus.
@@ -83,6 +84,9 @@ class Consensus(object):
                 assumed to be excluded from further concideration. They are
                 essentially assigned to this cluster but don't affect the
                 consensus sequence.
+            max_dist (:obj:`float`, optional): Maximum differences expected
+                between two sequences originating from the same template,
+                relative to sequence length.
 
         Returns:
             :obj:`bool`: `True` if the sequence was successfully added to the
@@ -116,7 +120,8 @@ class Consensus(object):
             return False
 
         # if grossly different then just count this and move on
-        if self.sequence.grosslydifferent(seq_other):
+        if self.sequence.grosslydifferent(seq_other, length=10,
+                                          tolerance=max_dist*len(self.sequence)):
             if discard:
                 self.different += size_other
             self._logger.debug("Sequences are too different")
@@ -170,7 +175,7 @@ class Consensus(object):
         self.sequence.quality = ''.join(map(max, zip(qual_update, qual_other)))
         return True
 
-    def merge(self, other, tolerance):
+    def merge(self, other, tolerance, max_dist=0.02):
         """Merge two consensus sequences.
 
         Merging will only be attempted if the UIDs don't differ at more than `tolerance`
@@ -180,6 +185,9 @@ class Consensus(object):
             other (:obj:`pyrates.consensus.Consensus`): The consensus sequence to merge into
                 this one.
             tolerance (:obj:`int`): The maximum number of differences between UIDs.
+            max_dist (:obj:`float`, optional): Maximum differences expected
+                between two sequences originating from the same template,
+                relative to sequence length.
 
         Returns:
             :obj:`bool`: `True` if the sequences were successfully merged, `False` otherwise.
@@ -187,7 +195,7 @@ class Consensus(object):
         if self.uid.grosslydifferent(other.uid, len(self.uid), tolerance):
             return False
         return self.update(other.uid, other.sequence, other.size, diffs_other=other.diffs,
-                           discard=False)
+                           discard=False, max_dist=max_dist)
 
     def __str__(self):
         diff_str = ''
