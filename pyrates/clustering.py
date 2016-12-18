@@ -126,7 +126,7 @@ class Clustering(object):
             for (line_count, line) in enumerate(fastq):
                 # print out some stats as we go
                 if cls._logger.isEnabledFor(logging.DEBUG) and line_count > 0 and \
-                        (line_count % 10000) == 0:
+                        (line_count % 40000) == 0:
                     seq.log_progress(line_count)
                 elif (line_count % 4) == 1:
                     line = line.rstrip("\n")
