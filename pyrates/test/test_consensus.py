@@ -77,13 +77,14 @@ def test_update_uid(qual1, qual2, expect):
 
 def test_consensus_seq():
     """Compute consensus sequence"""
+    suffix = 'A'*45
     id1 = sequence.SequenceWithQuality("AAAA", "IIII")
-    seq1 = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC", "IIIDIIIIIIIIIII")
-    seq2 = sequence.SequenceWithQuality("ACTTTTTGTCTTAGC", "IIIIIIIIIDIDIII")
+    seq1 = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC"+suffix, "IIIDIIIIIIIIIII"*4)
+    seq2 = sequence.SequenceWithQuality("ACTTTTTGTCTTAGC"+suffix, "IIIIIIIIIDIDIII"*4)
     consensus = cons.Consensus(id1, seq2)
     success = consensus.update(id1, seq1)
 
-    seq_expect = "ACTTTTTGTCTAAGC"
+    seq_expect = "ACTTTTTGTCTAAGC"+suffix
     qual_expect = "I"*len(seq_expect)
     diff_expect = {3:{'T':1, 'G':1}, 11:{'A':1, 'T':1}}
     assert success, "Sequence %r was rejected" % seq1
@@ -96,18 +97,19 @@ def test_consensus_seq():
 
 def test_consensus_diff():
     """Update sequence diff"""
+    suffix = 'A'*45
     id1 = sequence.SequenceWithQuality("AAAA", "IIII")
-    seq1 = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC", "IIIDIIIIIIIIIII")
-    seq2 = sequence.SequenceWithQuality("ACTTTTTGTCTTAGC", "IIIIIIIIIDIDIII")
-    seq3 = sequence.SequenceWithQuality("ACTTTTTGTGTTAGC", "IIIIIIIIIqIDIII")
+    seq1 = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC"+suffix, "IIIDIIIIIIIIIII"*4)
+    seq2 = sequence.SequenceWithQuality("ACTTTTTGTCTTAGC"+suffix, "IIIIIIIIIDIDIII"*4)
+    seq3 = sequence.SequenceWithQuality("ACTTTTTGTGTTAGC"+suffix, "IIIIIIIIIqIDIII"*4)
     consensus = cons.Consensus(id1, seq2)
     success = consensus.update(id1, seq1)
 
     assert success, "Sequence %r was rejected" % seq1
     success = consensus.update(id1, seq3)
 
-    seq_expect = "ACTTTTTGTGTAAGC"
-    qual_expect = "IIIIIIIIIqIIIII"
+    seq_expect = "ACTTTTTGTGTAAGC"+suffix
+    qual_expect = "IIIIIIIIIqIIIII"*4
     diff_expect = {3:{'T':2, 'G':1},
                    11:{'A':1, 'T':2},
                    9:{'C':2, 'G':1}}
@@ -121,17 +123,20 @@ def test_consensus_diff():
 
 def test_consensus_str():
     """String representation of consensus sequences"""
+    suffix = 'A'*45
     id1 = sequence.SequenceWithQuality("AAAA", "IIII")
-    seq1 = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC", "IIIDIIIIIIIIIII", name='test')
-    seq2 = sequence.SequenceWithQuality("ACTTTTTGTCTTAGC", "IIIIIIIIIDIDIII", name='test')
+    seq1 = sequence.SequenceWithQuality("ACTGTTTGTCTAAGC"+suffix, "IIIDIIIIIIIIIII"*4, name='test')
+    seq2 = sequence.SequenceWithQuality("ACTTTTTGTCTTAGC"+suffix, "IIIIIIIIIDIDIII"*4, name='test')
     consensus = cons.Consensus(id1, seq1)
-    expect_str1 = "@test:AAAA:IIII:1:0:0:0\nACTGTTTGTCTAAGC\n+\nIIIDIIIIIIIIIII"
+    expect_str1 = "@test:AAAA:IIII:1:0:0:0\nACTGTTTGTCTAAGC"+suffix+"\n+\n"+"IIIDIIIIIIIIIII"*4
     expect_repr1 = "Consensus(uid=SequenceWithQuality(sequence='AAAA', " + \
                                                      "quality='IIII', name=''), " + \
-                   "sequence=SequenceWithQuality(sequence='ACTGTTTGTCTAAGC', " + \
-                                                "quality='IIIDIIIIIIIIIII', name='test'), " + \
+                   "sequence=SequenceWithQuality(sequence='ACTGTTTGTCTAAGC" + suffix +"', " + \
+                                                "quality='" + 'IIIDIIIIIIIIIII'*4 + \
+                                                "', name='test'), " + \
                    "diffs={}, size=1)"
-    expect_str2 = "@test:AAAA:IIII:2:0:0:0\nACTTTTTGTCTAAGC\n+4G1T1 12A1T1\nIIIIIIIIIIIIIII"
+    expect_str2 = "@test:AAAA:IIII:2:0:0:0\nACTTTTTGTCTAAGC" + suffix + \
+                  "\n+4G1T1 12A1T1\n" + "IIIIIIIIIIIIIII"*4
 
     assert str(consensus) == expect_str1, "\n%s\n!=\n%s" % (consensus, expect_str1)
     assert repr(consensus) == expect_repr1, "\n%r\n!=\n%r" % (consensus, expect_repr1)
