@@ -103,8 +103,12 @@ def setup_fastq_mismatch():
              'ACCTCTCCCTGTGGGTCATGTGACT']
     read2 = [uid2 + adapter + r + adapter_rev + uid1 for r in read2]
     qual2 = ['I'*len(read2[0])]*len(read2)
-    read3 = ['CCTTTTTGTGTCCAATGCCTAAATT', 'CATTTTTGTGTCCAATGCCTAAATT', 'CCTTTTTGTGTCCAATGCCTAAATT']
-    qual3 = ['I!IIIIIIIIIIIIIIIIIIIIIII', 'IIIIIIIIIIIIIIIIIIIIIIIII', 'I!IIIIIIIIIIIIIIIIIIIIIII']
+    read3 = ['CCTTTTTGTGTCCAATGCCTAAATTCCTTTTTGTGTCCAATGCCTAAATT',
+             'CATTTTTGTGTCCAATGCCTAAATTCCTTTTTGTGTCCAATGCCTAAATT',
+             'CCTTTTTGTGTCCAATGCCTAAATTCCTTTTTGTGTCCAATGCCTAAATT']
+    qual3 = ['I!IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII',
+             'IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII',
+             'I!IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII']
     read3 = [uid1 + adapter + r + adapter_rev + uid1 for r in read3]
     qual3 = ['I'*len(uid1) + 'I'*len(adapter) + q + 'I'*len(uid1) + 'I'*len(adapter) for q in qual3]
     create_fastq(read1 + read2 + read3, qual1 + qual2 + qual3, 'mismatch.fastq')

@@ -44,11 +44,11 @@ def test_merge_diff(idx):
     centres = [clusters[ids[i]] for i in idx]
     merged = centres[0]
     for i in range(1, len(clusters)):
-        success = merged.merge(centres[i], 2)
+        success = merged.merge(centres[i], 2, max_dist=0.5)
         assert success
-    expect = "+8G5T7 10A1C9G2"
+    expect = "+8G4T7 10C9G2"
     obs = str(merged).splitlines()
-    assert merged.size == 12, "%r != %r" % (merged.size, 12)
+    assert merged.size == 11, "%r != %r" % (merged.size, 11)
     assert obs[2] == expect, "%r != %r" % (obs[2], expect)
 
 def test_merge_targets():
@@ -82,6 +82,24 @@ def test_fastq_simple():
     """Create consensus from fastq file."""
     cluster = clust.Clustering.from_fastq(TMP + 'simple.fastq', 4, 'ACGT',
                                           threshold=0, prefix=1)
+    uid1_expect = 'AAAACCCC'
+    uid2_expect = 'CCCCAAAA'
+    seq1_expect = 'ACCTCTCCCTGTGGGTCATGTGACT'
+    seq2_expect = 'TTGTTTGAAAAACCTCGAAAGTAAC'
+
+    assert uid1_expect in cluster, "%r not in %r" % (uid1_expect, list(cluster.keys()))
+    assert uid2_expect in cluster, "%r not in %r" % (uid2_expect, list(cluster.keys()))
+    assert cluster[uid1_expect].sequence.sequence == seq1_expect, \
+           "%r != %r" % (cluster[uid1_expect].sequence.sequence, seq1_expect)
+    assert cluster[uid2_expect].sequence.sequence == seq2_expect, \
+           "%r != %r" % (cluster[uid2_expect].sequence.sequence, seq2_expect)
+
+@with_setup(setup_fastq_simple)
+@with_teardown(teardown_fastq_simple)
+def test_fastq_read_length():
+    """Create consensus from fastq file."""
+    cluster = clust.Clustering.from_fastq(TMP + 'simple.fastq', 4, 'ACGT',
+                                          threshold=0, prefix=1, read_length=25)
     uid1_expect = 'AAAACCCC'
     uid2_expect = 'CCCCAAAA'
     seq1_expect = 'ACCTCTCCCTGTGGGTCATGTGACT'
@@ -169,7 +187,7 @@ def test_fastq_mismatch():
     uid3_expect = 'AAAAAAAA'
     seq1_expect = 'ACCTCTCCCTGTGGGTCATGTGACT'
     seq2_expect = 'TTGTTTGAAAAACCTCGAAAGTAAC'
-    seq3_expect = 'CATTTTTGTGTCCAATGCCTAAATT'
+    seq3_expect = 'CATTTTTGTGTCCAATGCCTAAATTCCTTTTTGTGTCCAATGCCTAAATT'
 
     assert uid1_expect in cluster, "%r not in %r" % (uid1_expect, list(cluster.keys()))
     assert uid2_expect in cluster, "%r not in %r" % (uid2_expect, list(cluster.keys()))
