@@ -1,5 +1,5 @@
 build/*
-.vscode/.ropeproject/config.py
+.vscode
 dist/*
 *.egg-info/*
 *.pyc
