@@ -172,6 +172,11 @@ class Clustering(object):
         return seq
 
     def log_progress(self, line_count):
+        """ Produce series of log messages indicating progress of clustering.
+
+        Args:
+            line_count (:obj:`int`): Number of input lines processed so far.
+        """
         checkpoint = time.time()
         total_time = checkpoint - self.stats['start_time']
         batch_time = checkpoint - self.stats['batch_start']
