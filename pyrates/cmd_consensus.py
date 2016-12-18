@@ -54,6 +54,11 @@ def main():
         help='Maximum number of differences between IDs allowed to consider merging of clusters.'
     )
     parser.add_argument(
+        '--read-length', '-r',
+        default=None, required=False, type=int,
+        help='Read length used in sequencing.'
+    )
+    parser.add_argument(
         '--log',
         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
         default='INFO',
@@ -87,7 +92,7 @@ def main():
     started_at = time.time()
     seq = clust.Clustering.from_fastq(input_file=args.fastq, id_length=args.id_length,
                                       adapter=args.adapter, threshold=args.id_tolerance,
-                                      prefix=args.prefix_length)
+                                      prefix=args.prefix_length, read_length=args.read_length)
     seq.write(args.output)
     if logger.isEnabledFor(logging.INFO):
         total_different = 0
