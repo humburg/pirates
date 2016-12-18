@@ -24,12 +24,24 @@ class Clustering(object):
         clusters (:obj:`dict`): Cluster centres represented by consensus
             sequences and identified by the associated UID.
     """
-    __slots__ = 'clusters', '_store'
+    __slots__ = 'clusters', '_store', 'stats'
     _logger = utils.get_logger(__name__)
 
     def __init__(self, centres, store=None, wildcard=None,
-                 alphabet=('A', 'C', 'G', 'T'), tag_size=5, max_diff=3):
+                 alphabet=('A', 'C', 'G', 'T'), tag_size=5, max_diff=3,
+                 read_length=None):
         self.clusters = centres
+        ## keep track of UID handling for fragments that are shorter/longer than read length
+        created_at = time.time()
+        self.stats = {
+            'read_length':read_length,
+            'total_skipped':[0, 0],
+            'total_merged':[0, 0],
+            'total_fixed': [0, 0],
+            'single_count':[0, 0],
+            'start_time':created_at,
+            'batch_start':created_at
+        }
         if store is not None:
             self._store = store
         elif tag_size > 0:
@@ -82,61 +94,45 @@ class Clustering(object):
         return similar_id
 
     @classmethod
-    def from_fastq(cls, input_file, id_length, adapter, threshold=5, prefix=5):
+    def from_fastq(cls, input_file, id_length, adapter, threshold=5, prefix=5, read_length=None):
         """Read FASTQ file to generate consensus sequences.
 
         Args:
             input_file (:obj:`str`): Name of input file.
             id_length (:obj:`int`): Length of UID sequence at beginning/end of read.
             adapter (:obj:`str`): Adapter sequence.
-            threshold (:obj:`int`): Maximum number of differences allowed between UIDs.
+            threshold (:obj:`int`, optional): Maximum number of differences allowed between UIDs.
+            prefix (:obj:`int`, optional): Length of UID prefix to use in clustering algorithm.
+            read_length (:obj:`int`, optional): Original read length used. If this is set and
+                and the logging level is sufficiently high, additional log entries are generated
+                to track the number of short and long fragments processed.
         Returns:
             :obj:`dict`: Computed consensus sequences.
         """
-        total_skipped = 0
-        total_merged = 0
-        total_fixed = 0
-        single_count = 0
+        adapt_length = id_length + len(adapter)
+        if read_length is not None:
+            max_short = read_length - id_length - len(adapter)
+        else:
+            max_short = 0
         name = os.path.basename(input_file).split('.')[0]
 
         id_set = pseq.GroupedSequenceStore(id_length*2, tag_size=prefix, max_diff=threshold,
                                            wildcard='N')
         id_map = {}
-        seq = cls({}, id_set)
+        seq = cls({}, id_set, read_length=read_length)
 
-        adapt_length = id_length + len(adapter)
         open_fun = utils.smart_open(input_file)
-        start_time = time.time()
-        batch_start = start_time
         with open_fun(input_file) as fastq:
             for (line_count, line) in enumerate(fastq):
                 # print out some stats as we go
                 if cls._logger.isEnabledFor(logging.DEBUG) and line_count > 0 and \
                         (line_count % 10000) == 0:
-                    checkpoint = time.time()
-                    total_time = checkpoint - start_time
-                    batch_time = checkpoint - batch_start
-                    batch_start = checkpoint
-                    cls._logger.debug("reads: %d, clusters: %d, singletons: %d (%.1f%%), " +
-                                      "ambiguous UIDs: %d (%.2f%%)",
-                                      line_count/4, len(seq), single_count,
-                                      single_count/(len(seq)/100.0),
-                                      seq.fail_count,
-                                      seq.fail_count/(line_count/4.0)*100)
-                    cls._logger.debug("similar UIDs: %d (%.1f%%), UIDs merged: %d (%.1f%%)" +
-                                      "merge failures: %d (%.1f%%)",
-                                      total_fixed, total_fixed/(line_count/4.0)*100,
-                                      total_merged,
-                                      total_merged/(line_count/4.0)*100,
-                                      total_skipped, total_skipped/(line_count/4.0)*100)
-                    cls._logger.debug("total time: %s, increment: %s, rate: %.1f reads/s",
-                                      datetime.timedelta(seconds=total_time),
-                                      datetime.timedelta(seconds=batch_time),
-                                      line_count/4.0/total_time)
+                    seq.log_progress(line_count)
                 elif (line_count % 4) == 1:
                     line = line.rstrip("\n")
                     nameid = line[0:id_length] + line[-id_length:]
                     sequence = line[adapt_length:-adapt_length]
+                    is_long = len(sequence) > max_short
                 elif (line_count % 4) == 3:
                     line = line.rstrip("\n")
                     qnameid = line[0:id_length] + line[-id_length:]
@@ -148,25 +144,66 @@ class Clustering(object):
                     similar_id = None
                     if nameid in id_map:
                         similar_id = id_map[nameid]
-                        total_fixed += 1
+                        seq.stats['total_fixed'][is_long] += 1
+                        id_matched = False
                     elif nameid not in seq:
                         similar_id = seq.merge_target(uid, read_seq, id_map, threshold)
+                        id_matched = False
                         if similar_id is not None:
-                            total_fixed += 1
+                            seq.stats['total_fixed'][is_long] += 1
                     else:
                         similar_id = nameid
+                        id_matched = True
                     if similar_id is not None:
                         success = seq[similar_id].update(uid, read_seq)
                         if success:
-                            total_merged += 1
+                            if not id_matched:
+                                seq.stats['total_merged'][is_long] += 1
                             if seq[similar_id].size == 2:
-                                single_count -= 1
+                                seq.stats['single_count'][is_long] -= 1
                         else:
-                            total_skipped += 1
+                            seq.stats['total_skipped'][is_long] += 1
                     else:
                         seq.add(uid, read_seq)
-                        single_count += 1
+                        seq.stats['single_count'][is_long] += 1
         return seq
+
+    def log_progress(self, line_count):
+        checkpoint = time.time()
+        total_time = checkpoint - self.stats['start_time']
+        batch_time = checkpoint - self.stats['batch_start']
+        self.stats['batch_start'] = checkpoint
+        self._logger.debug("reads: %d, clusters: %d, singletons: %d (%.1f%%), " +
+                           "corrupted UIDs: %d (%.2f%%)",
+                           line_count/4, len(self), sum(self.stats['single_count']),
+                           sum(self.stats['single_count'])/(len(self)/100.0),
+                           self.fail_count,
+                           self.fail_count/(line_count/4.0)*100)
+        if self.stats['read_length'] is not None:
+            self._logger.debug("singletons (short/long): %d %d",
+                               self.stats['single_count'][0], self.stats['single_count'][1])
+        self._logger.debug("similar UIDs: %d (%.1f%%), UIDs merged: %d (%.1f%%), " +
+                           "merge failures: %d (%.1f%%)",
+                           sum(self.stats['total_fixed']),
+                           sum(self.stats['total_fixed'])/(line_count/4.0)*100,
+                           sum(self.stats['total_merged']),
+                           sum(self.stats['total_merged'])/(line_count/4.0)*100,
+                           sum(self.stats['total_skipped']),
+                           sum(self.stats['total_skipped'])/(line_count/4.0)*100)
+        if self.stats['read_length'] is not None:
+            self._logger.debug("similar UIDs (short/long): %d %d",
+                               self.stats['total_fixed'][0],
+                               self.stats['total_fixed'][1])
+            self._logger.debug("merged UIDs (short/long): %d %d",
+                               self.stats['total_merged'][0],
+                               self.stats['total_merged'][1])
+            self._logger.debug("merge failures (short/long): %d %d",
+                               self.stats['total_skipped'][0],
+                               self.stats['total_skipped'][1])
+        self._logger.debug("total time: %s, increment: %s, rate: %.1f reads/s",
+                           datetime.timedelta(seconds=total_time),
+                           datetime.timedelta(seconds=batch_time),
+                           line_count/4.0/total_time)
 
     def write(self, output_file):
         """Write consensus sequences to fastq file.
