@@ -104,7 +104,7 @@ def main():
             total_shorter += seq[uid].shorter
             total_longer += seq[uid].longer
         logger.info("Number of consensus sequence with unique labels: %d", len(seq))
-        logger.info("Number sequences grossly differet from consensus with same label: %d",
+        logger.info("Number sequences grossly different from consensus with same label: %d",
                     total_different)
         logger.info("Number of sequences that were shorter than consensus sequence: %d",
                     total_shorter)
