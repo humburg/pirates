@@ -125,11 +125,14 @@ class Clustering(object):
 
         open_fun = utils.smart_open(input_file)
         line_count = 0
+        ping_freq = 40000
+        if cls._logger.isEnabledFor(logging.INFO) and not cls._logger.isEnabledFor(logging.DEBUG):
+            ping_freq = ping_freq * 10
         with open_fun(input_file) as fastq:
             for (line_count, line) in enumerate(fastq):
                 # print out some stats as we go
-                if cls._logger.isEnabledFor(logging.DEBUG) and line_count > 0 and \
-                        (line_count % 40000) == 0:
+                if cls._logger.isEnabledFor(logging.INFO) and line_count > 0 and \
+                        (line_count % ping_freq) == 0:
                     seq.log_progress(line_count)
                 elif (line_count % 4) == 1:
                     line = line.rstrip("\n")
@@ -185,41 +188,41 @@ class Clustering(object):
         total_time = checkpoint - self.stats['start_time']
         batch_time = checkpoint - self.stats['batch_start']
         self.stats['batch_start'] = checkpoint
-        self._logger.debug("reads: %d, clusters: %d, singletons: %d (%.1f%%), " +
-                           "corrupted UIDs: %d (%.2f%%)",
-                           line_count/4, len(self), sum(self.stats['single_count']),
-                           sum(self.stats['single_count'])/(len(self)/100.0),
-                           self.fail_count,
-                           self.fail_count/(line_count/4.0)*100)
+        self._logger.info("reads: %d, clusters: %d, singletons: %d (%.1f%%), " +
+                          "corrupted UIDs: %d (%.2f%%)",
+                          line_count/4, len(self), sum(self.stats['single_count']),
+                          sum(self.stats['single_count'])/(len(self)/100.0),
+                          self.fail_count,
+                          self.fail_count/(line_count/4.0)*100)
         if self.stats['read_length'] is not None:
-            self._logger.debug("reads (short/long): %d %d",
-                               self.stats['reads'][0], self.stats['reads'][1])
-            self._logger.debug("clusters (short/long): %d %d",
-                               self.stats['clusters'][0], self.stats['clusters'][1])
-            self._logger.debug("singletons (short/long): %d %d",
-                               self.stats['single_count'][0], self.stats['single_count'][1])
-        self._logger.debug("similar UIDs: %d (%.1f%%), UIDs merged: %d (%.1f%%), " +
-                           "merge failures: %d (%.1f%%)",
-                           sum(self.stats['total_fixed']),
-                           sum(self.stats['total_fixed'])/(line_count/4.0)*100,
-                           sum(self.stats['total_merged']),
-                           sum(self.stats['total_merged'])/(line_count/4.0)*100,
-                           sum(self.stats['total_skipped']),
-                           sum(self.stats['total_skipped'])/(line_count/4.0)*100)
+            self._logger.info("reads (short/long): %d %d",
+                              self.stats['reads'][0], self.stats['reads'][1])
+            self._logger.info("clusters (short/long): %d %d",
+                              self.stats['clusters'][0], self.stats['clusters'][1])
+            self._logger.info("singletons (short/long): %d %d",
+                              self.stats['single_count'][0], self.stats['single_count'][1])
+        self._logger.info("similar UIDs: %d (%.1f%%), UIDs merged: %d (%.1f%%), " +
+                          "merge failures: %d (%.1f%%)",
+                          sum(self.stats['total_fixed']),
+                          sum(self.stats['total_fixed'])/(line_count/4.0)*100,
+                          sum(self.stats['total_merged']),
+                          sum(self.stats['total_merged'])/(line_count/4.0)*100,
+                          sum(self.stats['total_skipped']),
+                          sum(self.stats['total_skipped'])/(line_count/4.0)*100)
         if self.stats['read_length'] is not None:
-            self._logger.debug("similar UIDs (short/long): %d %d",
-                               self.stats['total_fixed'][0],
-                               self.stats['total_fixed'][1])
-            self._logger.debug("merged UIDs (short/long): %d %d",
-                               self.stats['total_merged'][0],
-                               self.stats['total_merged'][1])
-            self._logger.debug("merge failures (short/long): %d %d",
-                               self.stats['total_skipped'][0],
-                               self.stats['total_skipped'][1])
-        self._logger.debug("total time: %s, increment: %s, rate: %.1f reads/s",
-                           datetime.timedelta(seconds=total_time),
-                           datetime.timedelta(seconds=batch_time),
-                           line_count/4.0/total_time)
+            self._logger.info("similar UIDs (short/long): %d %d",
+                              self.stats['total_fixed'][0],
+                              self.stats['total_fixed'][1])
+            self._logger.info("merged UIDs (short/long): %d %d",
+                              self.stats['total_merged'][0],
+                              self.stats['total_merged'][1])
+            self._logger.info("merge failures (short/long): %d %d",
+                              self.stats['total_skipped'][0],
+                              self.stats['total_skipped'][1])
+        self._logger.info("total time: %s, increment: %s, rate: %.1f reads/s",
+                          datetime.timedelta(seconds=total_time),
+                          datetime.timedelta(seconds=batch_time),
+                          line_count/4.0/total_time)
 
     def write(self, output_file):
         """Write consensus sequences to fastq file.
