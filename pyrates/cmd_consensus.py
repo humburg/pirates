@@ -110,7 +110,7 @@ def main():
                     total_shorter)
         logger.info("Number of sequences that were longer then consensus sequence %d",
                     total_longer)
-        logger.info("Number of sequences with ambiguous label %d (%.2f%%)",
+        logger.info("Number of sequences with corrupted label %d (%.2f%%)",
                     seq.fail_count, seq.fail_count/float(len(seq))*100)
     logger.info('Total time taken: %s', str(datetime.timedelta(seconds=time.time() - started_at)))
     mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
