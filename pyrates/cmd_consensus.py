@@ -104,13 +104,13 @@ def main():
             total_shorter += seq[uid].shorter
             total_longer += seq[uid].longer
         logger.info("Number of consensus sequence with unique labels: %d", len(seq))
-        logger.info("Number sequences grossly differet from consensus with same label: %d",
+        logger.info("Number sequences grossly different from consensus with same label: %d",
                     total_different)
         logger.info("Number of sequences that were shorter than consensus sequence: %d",
                     total_shorter)
         logger.info("Number of sequences that were longer then consensus sequence %d",
                     total_longer)
-        logger.info("Number of sequences with ambiguous label %d (%.2f%%)",
+        logger.info("Number of sequences with corrupted label %d (%.2f%%)",
                     seq.fail_count, seq.fail_count/float(len(seq))*100)
     logger.info('Total time taken: %s', str(datetime.timedelta(seconds=time.time() - started_at)))
     mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0

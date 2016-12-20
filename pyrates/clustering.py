@@ -39,6 +39,8 @@ class Clustering(object):
             'total_merged':[0, 0],
             'total_fixed': [0, 0],
             'single_count':[0, 0],
+            'reads':[0, 0],
+            'clusters':[0, 0],
             'start_time':created_at,
             'batch_start':created_at
         }
@@ -134,6 +136,7 @@ class Clustering(object):
                     nameid = line[0:id_length] + line[-id_length:]
                     sequence = line[adapt_length:-adapt_length]
                     is_long = len(sequence) > max_short
+                    seq.stats['reads'][is_long] += 1
                 elif (line_count % 4) == 3:
                     line = line.rstrip("\n")
                     qnameid = line[0:id_length] + line[-id_length:]
@@ -167,6 +170,7 @@ class Clustering(object):
                     else:
                         seq.add(uid, read_seq)
                         seq.stats['single_count'][is_long] += 1
+                        seq.stats['clusters'][is_long] += 1
         if cls._logger.isEnabledFor(logging.DEBUG) and line_count > 0:
             seq.log_progress(line_count)
         return seq
@@ -188,6 +192,10 @@ class Clustering(object):
                            self.fail_count,
                            self.fail_count/(line_count/4.0)*100)
         if self.stats['read_length'] is not None:
+            self._logger.debug("reads (short/long): %d %d",
+                               self.stats['reads'][0], self.stats['reads'][1])
+            self._logger.debug("clusters (short/long): %d %d",
+                               self.stats['clusters'][0], self.stats['clusters'][1])
             self._logger.debug("singletons (short/long): %d %d",
                                self.stats['single_count'][0], self.stats['single_count'][1])
         self._logger.debug("similar UIDs: %d (%.1f%%), UIDs merged: %d (%.1f%%), " +
