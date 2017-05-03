@@ -32,7 +32,7 @@ def main():
     parser.add_argument(
         '--id-length', '-b',
         metavar='LENGTH',
-        default=8,
+        default=8, type=int,
         help='Length of unique identifier at start of read.'
     )
     parser.add_argument(
